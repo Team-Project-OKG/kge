@@ -14,14 +14,14 @@ ax_search:
       bounds: [0.05, 0.2]
     - name: train.optimizer.default.args.weight_decay
       type: range
-      bounds: [1e-6, 1e-10]
+      bounds: [0.0000000001, 0.000001]
     - name: lstm_lookup_embedder.dim
       type: choice
       values: [256, 512]
       is_ordered: True
-    - name: lstm_lookup_embedder
+    - name: lstm_lookup_embedder.dropout
       type: range
-      bounds: [0, 0.1]
+      bounds: [0.0, 0.1]
 
 
 
