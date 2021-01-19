@@ -331,16 +331,8 @@ class TrainingJob(TrainingOrEvaluationJob):
         backward_time = 0.0
         optimizer_time = 0.0
 
-        # Todo: remove (memory leak)
-        #from pytorch_memlab import profile_every, MemReporter
-        #reporter = MemReporter()
-
         # process each batch
         for batch_index, batch in enumerate(self.loader):
-
-            #if batch_index % 10 == 0:
-            #    reporter.report(device=torch.device(0), verbose=True)
-
             # create initial batch trace (yet incomplete)
             self.current_trace["batch"] = {
                 "type": self.type_str,
@@ -445,16 +437,16 @@ class TrainingJob(TrainingOrEvaluationJob):
             #     self.config.log("Exported compute graph to " + f + ".{gv,pdf}")
 
             # print memory stats
-            #if self.epoch == 1 and batch_index == 0:
-            if self.device.startswith("cuda"):
-                self.config.log(
-                    "CUDA memory after first batch: allocated={:14,} "
-                    "reserved={:14,} max_allocated={:14,}".format(
-                        torch.cuda.memory_allocated(self.device),
-                        torch.cuda.memory_reserved(self.device),
-                        torch.cuda.max_memory_allocated(self.device),
+            if self.epoch == 1 and batch_index == 0:
+                if self.device.startswith("cuda"):
+                    self.config.log(
+                        "CUDA memory after first batch: allocated={:14,} "
+                        "reserved={:14,} max_allocated={:14,}".format(
+                            torch.cuda.memory_allocated(self.device),
+                            torch.cuda.memory_reserved(self.device),
+                            torch.cuda.max_memory_allocated(self.device),
+                        )
                     )
-                )
 
             # update parameters
             batch_optimizer_time = -time.time()
