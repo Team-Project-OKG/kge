@@ -6,13 +6,13 @@ from torch import Tensor
 import torch.nn
 import numpy as np
 import os
-
+import time
 import kge
 from kge import Config, Configurable, Dataset
 from kge.misc import filename_in_module
 from kge.util import load_checkpoint
 from typing import Any, Dict, List, Optional, Union, Tuple
-
+from operator import itemgetter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -749,6 +749,13 @@ class KgeModel(KgeBase):
             p = self.get_p_embedder().embed(p)
 
         return self._scorer.score_emb(s, p, o, combine="s_o")
+
+    def score_olp_neg_sampling(self, s: Tensor, o: Tensor, p: Tensor, unique_targets: Tensor):
+        neg_samps = self.get_s_embedder().embed(unique_targets)
+        s = self.get_s_embedder().embed(s)
+        o = self.get_s_embedder().embed(o)
+        p = self.get_p_embedder().embed(p)
+        return self._scorer.score_emb(s, p, neg_samps, combine="sp_"), self._scorer.score_emb(s, p, o, combine="spo").view(-1), self._scorer.score_emb(neg_samps, p, o, combine="_po")
 
     def score_sp_po(
         self, s: Tensor, p: Tensor, o: Tensor, entity_subset: Tensor = None
