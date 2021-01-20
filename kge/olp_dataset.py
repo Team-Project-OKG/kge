@@ -62,6 +62,7 @@ class OLPDataset(Dataset):
 
         # Tensors containing the mappings of entity/relation ids to a series of token ids
         self._mentions_to_token_ids: Dict[str, Tensor] = {}
+        self._mention_lengths: Dict[str, Tensor] = {}
 
         # Tensors containing the alternative mentions for subjects and objects
         self._alternative_subject_mentions: Dict[str, List] = {}
@@ -178,18 +179,20 @@ class OLPDataset(Dataset):
     # create mappings of entity mentions to a series of token ids
     def entity_mentions_to_token_ids(self):
         if "entities" not in self._alternative_object_mentions:
-            map_, actual_max = self.load_token_sequences("entity_id_token_ids", self._num_entities,
+            map_, lengths_, actual_max = self.load_token_sequences("entity_id_token_ids", self._num_entities,
                                                          self._max_tokens_per_entity)
             self._mentions_to_token_ids["entities"] = torch.from_numpy(map_)
+            self._mention_lengths["entities"] = torch.from_numpy(lengths_)
             self._max_tokens_per_entity = actual_max
         return self._mentions_to_token_ids["entities"]
 
     # create mappings of relation mentions to a series of token ids_nr_alternative_subjects
     def relation_mentions_to_token_ids(self):
         if "relations" not in self._alternative_object_mentions:
-            map_, actual_max = self.load_token_sequences("relation_id_token_ids", self._num_relations,
+            map_, lengths_, actual_max = self.load_token_sequences("relation_id_token_ids", self._num_relations,
                                                          self._max_tokens_per_relation)
             self._mentions_to_token_ids["relations"] = torch.from_numpy(map_)
+            self._mention_lengths["relations"] = torch.from_numpy(lengths_)
             self._max_tokens_per_relation = actual_max
         return self._mentions_to_token_ids["relations"]
 
@@ -201,7 +204,7 @@ class OLPDataset(Dataset):
             id_delimiter: str = "\t",
             token_delimiter: str = " "
             # TODO: add pickle support
-    ) -> Tuple[np.array, int]:
+    ) -> Tuple[np.array, np.array, int]:
         """ Load a sequence of token ids associated with different mentions for a given key
 
         If duplicates are found, raise a key error as duplicates cannot be handled with the
@@ -217,11 +220,11 @@ class OLPDataset(Dataset):
                 "Unexpected file type: "
                 f"dataset.files.{key}.type='{filetype}', expected 'sequence_map'"
             )
-
         with open(os.path.join(self.folder, filename), "r") as file:
             dictionary = {}
             if num_ids and max_tokens:
                 map_ = np.zeros([num_ids, max_tokens], dtype=int)
+                lengths_ = np.zeros([num_ids], dtype=int)
             actual_max = 0
             max_id = 0
             used_keys = set()
@@ -241,6 +244,7 @@ class OLPDataset(Dataset):
                 actual_max = max(actual_max, len(split_))
                 if num_ids and max_tokens:
                     map_[k][0:len(split_)] = split_
+                    lengths_[k] = len(split_)
                 else:
                     dictionary[k] = split_
                     max_id = max(max_id, k)
@@ -249,12 +253,14 @@ class OLPDataset(Dataset):
             map_ = np.delete(map_, np.s_[actual_max:map_.shape[1]], 1)
         else:
             map_ = np.zeros([max_id + 1, actual_max], dtype=int)
+            lengths_ = np.zeros([max_id + 1], dtype=int)
             for k, split_ in dictionary.items():
                 map_[k][0:len(split_)] = split_
+                lengths_[k] = len(split_)
 
         self.config.log(f"Loaded {map_.shape[0]} token sequences from {key}")
 
-        return map_, actual_max
+        return map_, lengths_, actual_max
 
     def split_olp(self, split: str) -> Tuple[Tensor, Tensor, Tensor]:
         """Return the split and the alternative mentions of the specified name.
@@ -280,8 +286,9 @@ class OLPDataset(Dataset):
             triples, triple_indexes, alternative_subjects, alternative_objects, num_subjects, num_objects = OLPDataset._load_quintuples(
                 os.path.join(self.folder, filename),
                 filetype,
-                use_pickle=self.config.get("dataset.pickle"),
+                use_pickle=self.config.get("dataset.pickle")
             )
+
             self.config.log(f"Loaded {len(triples)} {key} {filetype}")
             self._triples[key] = triples
             self._triple_indexes[key] = triple_indexes
@@ -290,7 +297,107 @@ class OLPDataset(Dataset):
             self._nr_alternative_subjects[key] = num_subjects
             self._nr_alternative_objects[key] = num_objects
 
+            if self.config.get(f"negative_sampling.triple_sampling.type") == "sequence_bins" and key == "train":
+                self._determine_bins(triples.numpy(), os.path.join(self.folder, filename))
+
         return self._triples[key], self._alternative_subject_mentions[key], self._alternative_object_mentions[key]
+
+    def _determine_bins(self,
+        triples: np.array,
+        filename: str):
+
+        seq_len_indexes = None
+        use_pickle = self.config.get("dataset.pickle")
+        filter_start_end = self.config.get("dataset.filter_start_and_end_token")
+
+        if use_pickle:
+            # check if there is a pickled, up-to-date version of the file
+            pickle_suffix = f"train_seq_len_indexes_{filter_start_end}.pckl"
+            pickle_filename = os.path.join(self.folder, pickle_suffix)
+            seq_len_indexes = Dataset._pickle_load_if_uptodate(None, pickle_filename, filename)
+        if seq_len_indexes is None:
+            seq_len_indexes = [[[list() for i in range(self.max_tokens_per_entity() + 1)] for j in range (self.max_tokens_per_relation() + 1)] for k in range(self.max_tokens_per_entity() + 1)]
+            i = 0
+            for (sub, pred, obj) in zip(triples[:, 0], triples[:, 1], triples[:, 2]):
+                seq_len_indexes[self._mention_lengths["entities"][sub]][self._mention_lengths["relations"][pred]][self._mention_lengths["entities"][obj]].append(i)
+                i += 1
+            if use_pickle:
+                Dataset._pickle_dump_atomic(seq_len_indexes, pickle_filename)
+
+        counter = np.zeros([self.max_tokens_per_entity() + 1, self.max_tokens_per_relation() + 1, self.max_tokens_per_entity() + 1], dtype=int)
+        for i, sub_len in enumerate(seq_len_indexes):
+            for j, pred_len in enumerate(sub_len):
+                for k, obj_len in enumerate(pred_len):
+                    counter[i, j, k] = len(obj_len)
+        boundaries, sizes, bin_indexes = OLPDataset._find_boundaries(counter, self.config.get("negative_sampling.triple_sampling.min_support"))
+
+        self._bin_boundaries = boundaries
+        self._bin_sizes = sizes
+
+        self._bins = []
+        for bin_index in bin_indexes:
+            self._bins.append([])
+            for i in bin_index[0]:
+                for j in bin_index[1]:
+                    for k in bin_index[2]:
+                        self._bins[len(self._bins) - 1] += seq_len_indexes[i][j][k]
+
+    @staticmethod
+    def _find_boundaries(
+            counter: np.array,
+            min_support: Int
+    ) -> Tuple[List, List, List]:
+
+        """
+        Recursively builds boundaries for bins ascendingly so that each bin includes at least min_support triples.
+
+        Bins aim to have minimum variance in sequence lengths for subjects, predicates and objects. The numbers
+        specified in a boundary is the maximum sequence length for (subject, predicate, object).
+        """
+
+        boundaries = []
+        sizes = []
+        bin_indexes = []
+        last_nonzero = 0
+        prev_bound = 0
+        bound = 0
+        for i in range(1, counter.shape[0] + 1):
+            if len(counter.shape) == 1:
+                if np.sum(counter[i - 1:i]) > 0:
+                    last_nonzero = i - 1
+                support = np.sum(counter[bound:i])
+                if support >= min_support:
+                    boundaries.append(torch.tensor([i - 1]))
+                    sizes.append(support)
+                    bin_indexes.append([[i for i in range(bound, i)]])
+                    bound = i
+                elif i == counter.shape[0] and bound != 0:
+                    boundaries[len(boundaries) - 1] = torch.tensor([last_nonzero])
+                    sizes[len(sizes) - 1] += support
+                    bin_indexes[len(bin_indexes) - 1] = [bin_indexes[len(bin_indexes) - 1][0] + [i for i in range(bound, last_nonzero + 1)]]
+            else:
+                if np.sum(counter[i - 1:counter.shape[0]]) != 0:
+                    last_nonzero = i - 1
+                sub_counter = np.sum(counter[bound:i], axis=0)
+                sub_boundaries, sub_sizes, sub_bin_indexes = OLPDataset._find_boundaries(sub_counter, min_support)
+                if len(sub_boundaries) != 0:
+                    for index, sub_boundary in enumerate(sub_boundaries):
+                        boundaries.append(torch.cat([torch.tensor([i - 1]), sub_boundary]))
+                        sizes.append(sub_sizes[index])
+                        bin_indexes.append([[i for i in range(bound, i)], *sub_bin_indexes[index]])
+                    prev_bound = bound
+                    bound = i
+                elif i == counter.shape[0] and bound != 0:
+                    boundaries = [boundary for boundary in boundaries if boundary[0] != bound - 1]
+                    sizes = sizes[0:len(boundaries)]
+                    bin_indexes = bin_indexes[0:len(boundaries)]
+                    sub_counter = np.sum(counter[prev_bound:last_nonzero + 1], axis=0)
+                    sub_boundaries, sub_sizes, sub_bin_indexes = OLPDataset._find_boundaries(sub_counter, min_support)
+                    for index, sub_boundary in enumerate(sub_boundaries):
+                        boundaries.append(torch.cat([torch.tensor([last_nonzero]), sub_boundary]))
+                        sizes.append(sub_sizes[index])
+                        bin_indexes.append([[i for i in range(prev_bound, last_nonzero + 1)], *sub_bin_indexes[index]])
+        return boundaries, sizes, bin_indexes
 
     @staticmethod
     def _load_quintuples(

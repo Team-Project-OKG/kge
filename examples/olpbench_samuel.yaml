@@ -56,6 +56,9 @@ negative_sampling:
     s: 8192
     p: 0          # -1 means: same as s
     o: -1
+  triple_sampling:
+    type: 'sequence_bins'
+    min_support: 1024000
 
 
 # settings for the evaluation job

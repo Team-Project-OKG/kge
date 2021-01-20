@@ -308,6 +308,20 @@ negative_sampling:
     # 0). Corresponds to a symmetric Dirichlet prior.
     smoothing: 1
 
+  # How to create batches in training. Only change for the open link prediction task.
+  # - default      : When sampling a batch, draw triples from the entire dataset
+  # - sequence_bins: Will partition the OLP dataset into bins with minimum variance in the
+  #                  sequence lengths of subjects, predicates and objects. This enables
+  #                  cutting sequence lengths within each batch to the respective max
+  #                  sequence length of the bin, speeding up the training. This automatically
+  #                  causes negative samples to automatically be drawn from all entities / relations
+  #                  with at max the length of the true entity / relation.
+  #   - min_support: If sequence_bins is selected, enforces a minimum number of triples
+  #                  within each bin.
+  triple_sampling:
+    type: 'default'
+    min_support: 0
+
   # Number of times each slot of each positive triple is corrupted by the
   # sampler to obtain negative triples.
   num_samples:
