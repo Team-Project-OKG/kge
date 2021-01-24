@@ -4,6 +4,7 @@ import math
 import time
 import traceback
 from collections import defaultdict
+from threading import Lock
 
 from dataclasses import dataclass
 
@@ -928,15 +929,32 @@ class TrainingJobNegativeSampling(TrainingJob):
         super()._prepare()
 
         self.num_examples = self.dataset.split(self.train_split).size(0)
-        self.loader = torch.utils.data.DataLoader(
-            range(self.num_examples),
-            collate_fn=self._get_collate_fun(),
-            shuffle=True,
-            batch_size=self.batch_size,
-            num_workers=self.config.get("train.num_workers"),
-            worker_init_fn=_generate_worker_init_fn(self.config),
-            pin_memory=self.config.get("train.pin_memory"),
-        )
+
+        if self.config.get("negative_sampling.triple_sampling.type") == "default":
+            self.loader = torch.utils.data.DataLoader(
+                range(self.num_examples),
+                collate_fn=self._get_collate_fun(),
+                shuffle=True,
+                batch_size=self.batch_size,
+                num_workers=self.config.get("train.num_workers"),
+                worker_init_fn=_generate_worker_init_fn(self.config),
+                pin_memory=self.config.get("train.pin_memory"),
+            )
+        elif self.config.get("negative_sampling.triple_sampling.type") == "sequence_bins":
+            self.batch_to_bin = []
+            self.curr_index_in_bin = [0] * len(self.dataset._bin_sizes)
+            self.lock = Lock()
+            for i, size in enumerate(self.dataset._bin_sizes):
+                self.batch_to_bin += [i] * (math.ceil(size / self.batch_size))
+            self.loader = torch.utils.data.DataLoader(
+                self.batch_to_bin,
+                collate_fn=self._get_collate_fun_seq_len(),
+                shuffle=True,
+                batch_size=1,
+                num_workers=self.config.get("train.num_workers"),
+                worker_init_fn=_generate_worker_init_fn(self.config),
+                pin_memory=self.config.get("train.pin_memory"),
+            )
 
     def _get_collate_fun(self):
         # create the collate function
@@ -959,6 +977,52 @@ class TrainingJobNegativeSampling(TrainingJob):
             return {"triples": triples, "negative_samples": negative_samples}
 
         return collate
+
+    def _get_collate_fun_seq_len(self):
+        # create the collate function
+        def collate(batch):
+            """For an index of a batch in all batches associated with bins, get a batch from the respective bin
+            and return:
+
+            - triples (tensor of shape [n,3], ),
+            - negative_samples (list of tensors of shape [n,num_samples]; 3 elements
+              in order S,P,O)
+            """
+
+            lower_bound, upper_bound = self._get_curr_index_in_bin(batch[0])
+            triple_indexes = self.dataset._bins[batch[0]][lower_bound: upper_bound]
+
+            triples = self.dataset.split(self.train_split)[triple_indexes, :].long()
+
+            negative_samples = list()
+            for slot in [S, P, O]:
+                negative_samples.append(self._sampler.sample(triples, slot))
+            return {"triples": triples, "negative_samples": negative_samples}
+
+        return collate
+
+    def _get_curr_index_in_bin(self, index) -> (int, int):
+        # get the index range of a batch in a bin
+        # ensures through a lock that multiple workers in the DataLoader might not receive the same batch
+        self.lock.acquire()
+        try:
+            lower_bound = self.curr_index_in_bin[index]
+            upper_bound = min(lower_bound + self.batch_size, self.dataset._bin_sizes[index])
+            self.curr_index_in_bin[index] = upper_bound
+        finally:
+            self.lock.release()
+            return lower_bound, upper_bound
+
+    def run_epoch(self) -> Dict[str, Any]:
+        """
+        Shuffle bins and reset indexes at the start of each epoch if sequence length binning is used for the open
+        link prediction task.
+        """
+        if self.config.get("negative_sampling.triple_sampling.type") == "sequence_bins":
+            for len_bin in self.dataset._bins:
+                np.random.shuffle(len_bin)
+            self.curr_index_in_bin = [0] * len(self.dataset._bin_sizes)
+        return super().run_epoch()
 
     def _prepare_batch(
         self, batch_index, batch, result: TrainingJob._ProcessBatchResult

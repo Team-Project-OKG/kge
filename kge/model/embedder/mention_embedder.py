@@ -1,4 +1,5 @@
 from torch import Tensor
+import torch
 
 from kge import Config, Dataset
 from kge.model import LookupEmbedder
@@ -29,14 +30,14 @@ class MentionEmbedder(LookupEmbedder):
         elif "entity" in self.configuration_key:
             self._token_lookup = self.dataset._mentions_to_token_ids["entities"].to(self.config.get("job.device"))
 
-    def lookup_tokens(self, indexes: Tensor) -> Tensor:
-        return self._token_lookup[indexes]
+    def lookup_tokens(self, indexes: Tensor) -> Tensor: #TODO: must be reviewed
+        token_seq = self._token_lookup[indexes]
+        return token_seq[:, 0:torch.max(torch.nonzero(token_seq), dim=0).values[1]+1]
 
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
         return self._embeddings(token_indexes.long())
 
     def embed(self, indexes: Tensor) -> Tensor:
-        #self.embed_all()
         token_indexes = self.lookup_tokens(indexes)
         # lookup all tokens -> token embeddings with expected shape: 3D tensor (batch_size, max_tokens, dim)
         embeddings = self._token_embed(token_indexes)

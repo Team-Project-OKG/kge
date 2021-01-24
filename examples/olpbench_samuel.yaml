@@ -52,12 +52,15 @@ negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
+  triple_sampling:
+    type: 'sequence_bins'
+    min_support: 1024000
   samples_within_batch: True
   #num_samples:
    # s: 8192
    # p: 0          # -1 means: same as s
    # o: -1
-
+   
 
 # settings for the evaluation job
 eval:
