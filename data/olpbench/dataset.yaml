@@ -13,12 +13,12 @@ dataset:
   files.relation_id_token_ids.type: sequence_map
 
   name: olpbench
-  num_entities: 2473409
-  num_relations: 961262
-  num_tokens_entities: 196007
-  num_tokens_relations: 39302
-  max_tokens_per_entity: 13
-  max_tokens_per_relation: 14
+#  num_entities: 2473409
+#  num_relations: 961262
+#  num_tokens_entities: 196007
+#  num_tokens_relations: 39302
+#  max_tokens_per_entity: 13
+#  max_tokens_per_relation: 14
 
   files.train.filename: train_thorough.del
   files.train.size: 30650783
@@ -38,6 +38,5 @@ dataset:
   #files.valid.size: 9959
   #files.valid.type: triples
 
-  pickle: false
-
+  pickle: True
   filter_start_and_end_token: false
