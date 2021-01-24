@@ -5,15 +5,6 @@ job.type: search
 search.type: grid
 valid.metric: mean_reciprocal_rank_filtered
 
-grid_search:
-  parameters:
-    train.optimizer.default.args:
-      lr: [0.05, 0.1, 0.2]
-      weight_decay: [1e-6, 1e-10]
-    lstm_lookup_embedder:                                              #!!! adjust if model is changed
-      dim: [256, 512]
-      dropout: [0., 0.1]
-
 
 # settings for the dataset to use
 dataset:
@@ -29,12 +20,13 @@ complex:
 
 lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
   initialize: xavier_uniform_ # is Glorot initialization
+  dim: 512
 
 
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
-  max_epochs: 10
+  max_epochs: 2
   batch_size: 4096
   subbatch_auto_tune: True
   optimizer: Adagrad
@@ -52,15 +44,15 @@ negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
-  triple_sampling:
-    type: 'sequence_bins'
-    min_support: 1024000
   samples_within_batch: True
-  #num_samples:
-   # s: 8192
-   # p: 0          # -1 means: same as s
-   # o: -1
-   
+  num_samples: # can be ignored if samples_within_batch is True
+    s: 100
+    #p: 0          # -1 means: same as s
+    #o: -1
+
+valid:
+  every: 1
+
 
 # settings for the evaluation job
 eval:

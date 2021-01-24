@@ -22,6 +22,7 @@ from kge.job.trace import format_trace_entry
 from typing import Any, Callable, Dict, List, Optional
 import kge.job.util
 from kge.util.metric import Metric
+from kge.util.sampler import OlpNegativeSample
 
 SLOTS = [0, 1, 2]
 S, P, O = SLOTS
@@ -586,7 +587,10 @@ class TrainingJob(TrainingOrEvaluationJob):
             # determine data used for this subbatch
             subbatch_end = min(subbatch_start + max_subbatch_size, batch_size)
             subbatch_slice = slice(subbatch_start, subbatch_end)
-            self._process_subbatch(batch_index, batch, subbatch_slice, result)
+            if self.config.get("negative_sampling.samples_within_batch"):
+                self._process_subbatch_batch_sampling(batch_index, batch, subbatch_slice, result)
+            else:
+                self._process_subbatch(batch_index, batch, subbatch_slice, result)
 
         return result
 
@@ -1037,6 +1041,7 @@ class TrainingJobNegativeSampling(TrainingJob):
         result.size = len(batch["triples"])
         result.prepare_time += time.time()
 
+
     def _process_subbatch(
         self,
         batch_index,
@@ -1100,6 +1105,72 @@ class TrainingJobNegativeSampling(TrainingJob):
             result.backward_time += time.time()
 
 
+    def _process_subbatch_batch_sampling(
+        self,
+        batch_index,
+        batch,
+        subbatch_slice,
+        result: TrainingJob._ProcessBatchResult,
+    ):
+        # prepare
+        result.prepare_time -= time.time()
+        triples = batch["triples"][subbatch_slice]
+        batch_negative_samples = batch["negative_samples"]
+        batch_size = len(batch["triples"])
+        subbatch_size = len(triples)
+        result.prepare_time += time.time()
+        labels = batch["labels"]  # reuse b/w subbatches
+
+        pre_scores = OlpNegativeSample.pre_score_(self.model, triples)  # pre_scores = [_po, spo, sp_]
+        loss_value = {}
+
+        # process the subbatch for each slot separately
+        for slot in [S, P, O]:
+            num_samples = self._sampler.num_samples[slot]
+            if num_samples <= 0:
+                continue
+
+            # construct gold labels: first column corresponds to positives,
+            # remaining columns to negatives
+            if labels[slot] is None or labels[slot].shape != (
+                subbatch_size,
+                1 + num_samples,
+            ):
+                result.prepare_time -= time.time()
+                labels[slot] = torch.zeros(
+                    (subbatch_size, 1 + num_samples), device=self.device
+                )
+                labels[slot][:, 0] = 1
+                result.prepare_time += time.time()
+
+            # compute the scores
+            result.forward_time -= time.time()
+            scores = torch.empty((subbatch_size, num_samples + 1), device=self.device)
+            scores[:, 0] = pre_scores[1]
+            result.forward_time += time.time()
+            scores[:, 1:] = batch_negative_samples[slot].score(
+                self.model, pre_scores[slot], indexes=subbatch_slice
+            )
+            result.forward_time += batch_negative_samples[slot].forward_time
+            result.prepare_time += batch_negative_samples[slot].prepare_time
+
+            # compute loss for slot in subbatch (concluding the forward pass)
+            result.forward_time -= time.time()
+            loss_value[slot] = (self.loss(scores, labels[slot], num_negatives=num_samples) / batch_size)
+
+            result.avg_loss += loss_value[slot].item()
+            result.forward_time += time.time()
+
+        loss_value_torch = sum(loss_value.values())
+
+        # backward pass for this slot in the subbatch
+        result.backward_time -= time.time()
+        if not self.is_forward_only:
+            loss_value_torch.backward()
+        result.backward_time += time.time()
+
+
+
 class TrainingJob1vsAll(TrainingJob):
     """Samples SPO pairs and queries sp_ and _po, treating all other entities as negative."""
 
@@ -1145,6 +1216,7 @@ class TrainingJob1vsAll(TrainingJob):
         subbatch_slice,
         result: TrainingJob._ProcessBatchResult,
     ):
+
         # prepare
         result.prepare_time -= time.time()
         triples = batch["triples"][subbatch_slice].to(self.device)

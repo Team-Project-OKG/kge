@@ -459,14 +459,14 @@ class OLPDataset(Dataset):
                 # n = nr triples, columns: subject, predicate, object, alternative mentions
                 if len(alt_subjects) == 1:
                     alternative_subject_mentions[i] = torch.tensor([sub, pred, obj, *alt_subjects], dtype=int).view(-1,
-                                                                                                                    4)
+                                                                                                                    4).cpu()
                 else:
                     alternative_subject_mentions[i] = torch.cat(
                         [torch.as_tensor(entry, dtype=int).repeat((len(alt_subjects), 1)),
                          torch.as_tensor(alt_subjects).view(-1, 1)], dim=1)
                 sum_subject_mentions += len(alt_subjects)
                 if len(alt_objects) == 1:
-                    alternative_object_mentions[i] = torch.tensor([sub, pred, obj, *alt_objects], dtype=int).view(-1, 4)
+                    alternative_object_mentions[i] = torch.tensor([sub, pred, obj, *alt_objects], dtype=int).view(-1, 4).cpu()
                 else:
                     alternative_object_mentions[i] = torch.cat(
                         [torch.as_tensor(entry, dtype=int).repeat((len(alt_objects), 1)),
