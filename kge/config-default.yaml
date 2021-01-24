@@ -316,6 +316,7 @@ negative_sampling:
   #                  sequence length of the bin, speeding up the training. This automatically
   #                  causes negative samples to automatically be drawn from all entities / relations
   #                  with at max the length of the true entity / relation.
+  #                  !!! Initialize numpy random seed to ensure repoducibililty of results
   #   - min_support: If sequence_bins is selected, enforces a minimum number of triples
   #                  within each bin.
   triple_sampling:
