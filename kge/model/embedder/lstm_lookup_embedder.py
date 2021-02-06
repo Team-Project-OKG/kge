@@ -22,13 +22,18 @@ class LstmLookupEmbedder(MentionEmbedder):
             self.hidden_dim = self.dim
         else:
             self.hidden_dim = self.get_option("hidden_dim")
-        self._encoder_lstm = torch.nn.LSTM(input_size=self.dim, hidden_size=self.hidden_dim, dropout=0)
+        self._encoder_lstm = torch.nn.LSTM(
+            input_size=self.dim,
+            hidden_size=self.hidden_dim,
+            dropout=0,
+            batch_first=True
+        )
 
     def _token_embed(self, token_indexes):
         token_embeddings = self.embed_tokens(token_indexes.long())
-        lstm_output, hn = self._encoder_lstm(token_embeddings.permute(1, 0, 2))
-        #num_tokens = (token_indexes > 0).sum(dim=1)
-        return lstm_output[token_indexes[0].size()[0] - 1, :, :]
+        lstm_output, hn = self._encoder_lstm(token_embeddings)
+        num_tokens = (token_indexes > 0).sum(dim=1)
+        return lstm_output[torch.arange(0, lstm_output.shape[0]), num_tokens - 1]
 
     #def _token_embed(self, indexes: Tensor):
     #    "Combine token embeddings to one embedding for a mention."
