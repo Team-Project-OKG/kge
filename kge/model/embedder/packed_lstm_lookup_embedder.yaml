@@ -1,7 +1,5 @@
-# Stores explicitly an embedding for each object in a lookup table. See
-# https://pytorch.org/docs/stable/nn.html#torch.nn.Embedding
-lstm_lookup_embedder:
-  class_name: LstmLookupEmbedder
+packed_lstm_lookup_embedder:
+  class_name: PackedLstmLookupEmbedder
 
   emb_dim_as_hidden_dim: True
   hidden_dim: 0
