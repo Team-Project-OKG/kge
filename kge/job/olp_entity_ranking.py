@@ -78,7 +78,7 @@ class OLPEntityRankingJob(EntityRankingJob):
         # inspired by https://github.com/pytorch/pytorch/issues/36748#issuecomment-620279304
         def filter_mention_results(scores, quadruples):
             ranks = torch.unique_consecutive(quadruples[:, 0:3], dim=0, return_inverse=True)[1]
-            true_scores = torch.ones(ranks.max() + 1, dtype=torch.float64, device=self.device) * float("-inf")
+            true_scores = torch.ones(ranks.max() + 1, dtype=scores.dtype, device=self.device) * float("-inf")
             true_entities = torch.zeros(ranks.max() + 1)
 
             for i, rank in enumerate(ranks):
