@@ -59,9 +59,14 @@ class OLPEntityRankingJob(EntityRankingJob):
 
         # batch_data = torch.cat(batch_data).reshape((-1, 3))
 
-        alternative_subject_mentions = torch.cat(tuple(
-            itemgetter(*batch)(self.dataset._alternative_subject_mentions[split])))
-        alternative_object_mentions = torch.cat(tuple(itemgetter(*batch)(self.dataset._alternative_object_mentions[split])))
+        if self.batch_size != 1:
+            alternative_subject_mentions = torch.cat(tuple(
+                itemgetter(*batch)(self.dataset._alternative_subject_mentions[split])))
+            alternative_object_mentions = torch.cat(
+                tuple(itemgetter(*batch)(self.dataset._alternative_object_mentions[split])))
+        else:
+            alternative_subject_mentions = itemgetter(*batch)(self.dataset._alternative_subject_mentions[split])
+            alternative_object_mentions = itemgetter(*batch)(self.dataset._alternative_object_mentions[split])
 
         return batch_data, label_coords, test_label_coords, alternative_subject_mentions, alternative_object_mentions
 
