@@ -181,7 +181,7 @@ class EntityRankingJob(EvaluationJob):
 
             # compute true scores beforehand, since we can't get them from a chunked
             # score table
-            o_true_scores, s_true_scores = self.compute_true_scores(batch_coords)
+            o_true_scores, s_true_scores, o_true_entities, s_true_entities = self.compute_true_scores(batch_coords)
 
             done = False
 
@@ -216,10 +216,10 @@ class EntityRankingJob(EvaluationJob):
 
                         # replace the precomputed true_scores with the ones occurring in the
                         # scores matrix to avoid floating point issues
-                        s_in_chunk_mask = (chunk_start <= s) & (s < chunk_end)
-                        o_in_chunk_mask = (chunk_start <= o) & (o < chunk_end)
-                        o_in_chunk = (o[o_in_chunk_mask] - chunk_start).long()
-                        s_in_chunk = (s[s_in_chunk_mask] - chunk_start).long()
+                        s_in_chunk_mask = (chunk_start <= s_true_entities) & (s_true_entities < chunk_end)
+                        o_in_chunk_mask = (chunk_start <= o_true_entities) & (o_true_entities < chunk_end)
+                        o_in_chunk = (o_true_entities[o_in_chunk_mask] - chunk_start).long()
+                        s_in_chunk = (s_true_entities[s_in_chunk_mask] - chunk_start).long()
                         scores_sp[o_in_chunk_mask, o_in_chunk] = o_true_scores[o_in_chunk_mask]
                         scores_po[s_in_chunk_mask, s_in_chunk] = s_true_scores[s_in_chunk_mask]
 
@@ -467,7 +467,7 @@ class EntityRankingJob(EvaluationJob):
         s, p, o = batch[:, 0], batch[:, 1], batch[:, 2]
         o_true_scores = self.model.score_spo(s, p, o, "o").view(-1)
         s_true_scores = self.model.score_spo(s, p, o, "s").view(-1)
-        return o_true_scores, s_true_scores
+        return o_true_scores, s_true_scores, o, s
 
     def _densify_chunk_of_labels(
         self, labels: torch.Tensor, chunk_start: int, chunk_end: int
@@ -610,7 +610,7 @@ num_ties for each true score.
         )
 
         hits_at_k = (
-            (torch.cumsum(rank_hist[: max(self.hits_at_k_s)], dim=0) / n).tolist()
+            (torch.cumsum(rank_hist[: max(self.hits_at_k_s)], dim=0, dtype=torch.float64) / n).tolist()
             if n > 0.0
             else [0.0] * max(self.hits_at_k_s)
         )
