@@ -16,6 +16,7 @@ from kge import Config, Configurable
 import kge.indexing
 from kge.indexing import create_default_index_functions
 from kge.misc import kge_base_dir
+from kge.util.byte_pair_encoding import BytePairEncodingVocab
 
 from typing import Dict, List, Any, Callable, Union, Optional, Tuple
 
@@ -101,15 +102,39 @@ class OLPDataset(Dataset):
             for split in ["train", "valid", "test"]:
                 dataset.split_olp(split)
 
+        if config.get("dataset.byte_pair_encoding"):
+            iter_entities = config.get("dataset.iterations_entities")
+            iter_relations = config.get("dataset.iterations_relations")
+            dataset.bpe_vocab = BytePairEncodingVocab(dataset, iter_entities, iter_relations)
         return dataset
 
+    #def sub_token_vocab_size_entities(self) -> int:
     def vocab_size_entities(self) -> int:
-        "Return the number of embeddings for entities given the dataset."
-        return self.num_tokens_entities()
+        """Return the number of embeddings for sub-tokens given the dataset.
+        Necessary for byte-pair-encoding"""
+        if hasattr(self, 'bpe_vocab'):
+            return self.bpe_vocab.num_entity_sub_tokens
+        else:
+            return self.vocab_size_entities()
+
+    #def sub_token_vocab_size_relations(self) -> int:
+    def size_relations(self) -> int:
+        """Return the number of embeddings for sub-tokens given the dataset.
+        Necessary for byte-pair-encoding"""
+        if hasattr(self, 'bpe_vocab'):
+            return self.bpe_vocab.num_relation_sub_tokens
+        else:
+            return self.vocab_size_relations()
+
+    '''
+    def vocab_size_entities(self) -> int:
+            "Return the number of embeddings for entities given the dataset."
+            return self.num_tokens_entities()
 
     def vocab_size_relations(self) -> int:
         "Return the number of embeddings for relations given the dataset."
         return self.num_tokens_relations()
+    '''
 
     # Return the number of tokens for entities in the OLP dataset
     def num_tokens_entities(self) -> int:
