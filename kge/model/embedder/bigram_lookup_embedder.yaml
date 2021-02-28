@@ -9,7 +9,7 @@ bigram_lookup_embedder:
   pooling: "max"
 
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
-  requires_start_and_end_token: False
+  requires_start_and_end_token: True
 
   bin_within_batch: False
   bin_size: 0
