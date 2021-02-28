@@ -1,6 +1,6 @@
 job.type: train
 dataset:
-  name: olpbench
+  name: olpbench_small
   type: olp
 train:
   batch_size: 4096

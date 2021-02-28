@@ -31,4 +31,9 @@ dataset:
   files.valid.size: 10
   files.valid.type: quintuples
 
-  filter_start_and_end_token: False
+  pickle: True
+
+  # list of all tokens that should be regarded as padding, i.e. receive an embedding of 0
+  padding_indexes: [0, 2, 3]
+
+  has_start_and_end_token: True
