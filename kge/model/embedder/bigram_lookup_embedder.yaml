@@ -3,10 +3,27 @@
 bigram_lookup_embedder:
   class_name: BigramLookupEmbedder
 
-  # which pooling algorithm to use
-  pooling: "max"  # "max", "sum"
+  # parameters specific to Bigram Lookup Embedder
 
-  # for explanations of the following attributes, see lookup_embedder.yaml
+  # which pooling algorithm to use ("max", "sum", "mean")
+  pooling: "max"
+
+  # general settings for mention embedders (see mention_embedder.yaml for explanations)
+  requires_start_and_end_token: False
+
+  bin_within_batch: False
+  bin_size: 0
+
+  pretrained:
+    use: False
+    file:
+      name: glove.840B.300d_word2vec
+      type: txt
+    oov_tactic: 'random'
+    freeze: False
+    use_pickle: True
+
+  # settings for lookup embedders (see lookup_embedder.yaml for explanations)
   dim: 100
   initialize: normal_
   initialize_args:

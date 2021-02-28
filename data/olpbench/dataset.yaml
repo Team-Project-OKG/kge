@@ -39,4 +39,6 @@ dataset:
   #files.valid.type: triples
 
   pickle: True
-  filter_start_and_end_token: false
+
+  # list of all tokens that should be regarded as padding, i.e. receive an embedding of 0
+  padding_indexes: [0, 2, 3]
