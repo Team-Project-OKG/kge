@@ -230,7 +230,6 @@ class OLPDataset(Dataset):
 
         use_pickle = self.config.get("dataset.pickle")
 
-
         if use_pickle:
             # check if there is a pickled, up-to-date version of the file
             pickle_suffix = f"{key}-{filter_start_and_end_token}.pckl"
@@ -289,7 +288,6 @@ class OLPDataset(Dataset):
             if use_pickle:
                 Dataset._pickle_dump_atomic((map_, lengths_, actual_max), pickle_filename)
 
-
         self.config.log(f"Loaded {map_.shape[0]} token sequences from {key}")
 
         return map_, lengths_, actual_max
@@ -305,7 +303,7 @@ class OLPDataset(Dataset):
         return self.load_quintuples(split)
 
     def load_quintuples(self, key: str) -> Tuple[Tensor, List, List]:
-        "Load or return the triples and alternative mentions with the specified key."
+        """Load or return the triples and alternative mentions with the specified key."""
         if key not in self._triples:
             self.ensure_available(key)
             filename = self.config.get(f"dataset.files.{key}.filename")
