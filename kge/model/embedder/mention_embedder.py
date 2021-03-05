@@ -10,6 +10,7 @@ from gensim.models import KeyedVectors
 from kge import Config, Dataset
 from kge.misc import kge_base_dir
 from kge.model import LookupEmbedder
+from kge.util.byte_pair_encoding import BPESubTokenEmbedder
 
 
 class MentionEmbedder(LookupEmbedder):
@@ -34,9 +35,9 @@ class MentionEmbedder(LookupEmbedder):
             vocab_size: int,
             init_for_load_only=False,
     ):
-        super().__init__(
-            config, dataset, configuration_key, vocab_size, init_for_load_only=init_for_load_only)
+        super().__init__(config, dataset, configuration_key, vocab_size, init_for_load_only=init_for_load_only)
 
+        enable_bpe = config.get("dataset.byte_pair_encoding")
         self._bin_batch = self.get_option("bin_within_batch")
         self._bin_size = self.get_option("bin_size")
 
@@ -45,11 +46,13 @@ class MentionEmbedder(LookupEmbedder):
         elif "entity" in self.configuration_key:
             self._token_lookup = self.dataset._mentions_to_token_ids["entities"].to(self.config.get("job.device"))
 
+        if enable_bpe:
+            self._sub_token_embedder = BPESubTokenEmbedder(dataset.bpe_vocab, configuration_key)
+
+    def lookup_tokens(self, indexes: Tensor) -> Tensor: #TODO: must be reviewed
         if self.get_option("pretrained.use"):
             self._init_pretrained_word_emb()
-
         self._padding_indexes = self.config.get("dataset.padding_indexes")
-
         self.reset_padding_index()
 
     # set embeddings weights at padding, mention start and mention end index to 0
@@ -61,7 +64,13 @@ class MentionEmbedder(LookupEmbedder):
         return token_seq[:, 0:torch.max(torch.nonzero(token_seq), dim=0).values[1]+1]
 
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
-        return self._embeddings(token_indexes.long())
+        # Additionally split up tokens into sub-tokens and embed them
+        if self.config.get("dataset.byte_pair_encoding"):
+            sub_token_indexes = self._sub_token_embedder.get_sub_tokens_from_tokens(token_indexes)
+            emb = self._embeddings(sub_token_indexes)
+            return emb
+        else:
+            return self._embeddings(token_indexes.long())
 
     def embed(self, indexes: Tensor) -> Tensor:
         if self._bin_batch:

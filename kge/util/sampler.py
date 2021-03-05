@@ -640,11 +640,12 @@ class OlpNegativeSample(BatchNegativeSample):
 
         # create the complete scoring matrix
         device = self.positive_triples.device
-        scores = torch.empty(chunk_size, num_unique, device=device)
+        #scores = torch.empty(chunk_size, num_unique, device=device)
+        scores = torch.empty(chunk_size, pre_scores.shape[1] - 1, device=device)
 
         # fill in the unique negative scores. first column is left empty
         # to hold positive scores
-        scores[:, :] = pre_scores[:, :-1]
+        scores[:, :] = pre_scores[:, :-1]  # Todo: Why do we drop the last column of pre_scores?
         scores[drop_rows, drop_index[drop_rows]] = pre_scores[drop_rows, -1]
         self.forward_time += time.time()
         return scores

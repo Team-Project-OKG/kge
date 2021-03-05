@@ -26,7 +26,11 @@ class TransformerLookupEmbedder(MentionEmbedder):
         #switch batch and sequence dimension to match input format
         token_embeddings = self.embed_tokens(token_indexes.long())
         transformer_input = token_embeddings.permute(1, 0, 2)
-        return self._encoder_transformer(transformer_input)[token_indexes[0].size()[0] - 1]
+        #last_state = (token_indexes > 0).sum(1) - 1
+        encoded = self._encoder_transformer(transformer_input)
+        #encoded = encoded[last_state] #[token_indexes[0].size()[0] - 1]
+        return encoded[-1]
+        #return self._encoder_transformer(transformer_input)[token_indexes[0].size()[0] - 1]
 
     #def embed(self, indexes: Tensor) -> Tensor:
     #    return self._forward(super().embed(indexes), self._token_lookup[indexes])
