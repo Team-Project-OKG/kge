@@ -213,7 +213,6 @@ class OLPDataset(Dataset):
             max_tokens: int,
             id_delimiter: str = "\t",
             token_delimiter: str = " "
-            # TODO: add pickle support
     ) -> Tuple[np.array, np.array, int]:
         """ Load a sequence of token ids associated with different mentions for a given key
 

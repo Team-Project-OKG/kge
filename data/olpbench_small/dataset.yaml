@@ -23,7 +23,7 @@ dataset:
   files.test.filename: test_data.del
   files.test.size: 10
   files.test.type: quintuples
-  files.train.filename: train_data_basic.del
+  files.train.filename: train_data_thorough.del
   files.train.size: 126
   files.train.type: triples
   #files.valid.filename: validation_data_all.del
