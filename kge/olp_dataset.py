@@ -88,6 +88,16 @@ class OLPDataset(Dataset):
             config.log("Loading configuration of dataset " + name + "...")
             config.load(os.path.join(folder, "dataset.yaml"))
 
+        entity_embedder_requires_end_token = config.get(config.get(config.get("model")+".entity_embedder.type")
+                                                        + ".requires_start_and_end_token")
+        config.set("dataset.entity_filter_start_and_end_token", config.get("dataset.has_start_and_end_token") and
+                   not entity_embedder_requires_end_token)
+
+        relation_embedder_requires_end_token = config.get(config.get(config.get("model")+".relation_embedder.type")
+                                                        + ".requires_start_and_end_token")
+        config.set("dataset.relation_filter_start_and_end_token", config.get("dataset.has_start_and_end_token") and
+                   not relation_embedder_requires_end_token)
+
         dataset = OLPDataset(config, folder)
 
         if preload_data:
@@ -242,48 +252,68 @@ class OLPDataset(Dataset):
         filename = self.config.get(f"dataset.files.{key}.filename")
         filetype = self.config.get(f"dataset.files.{key}.type")
 
+        entity_or_relation = "entity" if "entity" in key else "relation"
+        filter_start_and_end_token = self.config.get(f"dataset.{entity_or_relation}_filter_start_and_end_token")
+
+        use_pickle = self.config.get("dataset.pickle")
+
+        if use_pickle:
+            # check if there is a pickled, up-to-date version of the file
+            pickle_suffix = f"{key}-{filter_start_and_end_token}.pckl"
+            pickle_filename = os.path.join(self.folder, pickle_suffix)
+            pickle_result = Dataset._pickle_load_if_uptodate(None, pickle_filename, filename)
+            if pickle_result is not None:
+                map_, lengths_, actual_max = pickle_result
+            else:
+                map_ = None
+                lengths_ = None
+                actual_max = None
+
         if filetype != "sequence_map":
             raise TypeError(
                 "Unexpected file type: "
                 f"dataset.files.{key}.type='{filetype}', expected 'sequence_map'"
             )
-        with open(os.path.join(self.folder, filename), "r") as file:
-            dictionary = {}
-            if num_ids and max_tokens:
-                map_ = np.zeros([num_ids, max_tokens], dtype=int)
-                lengths_ = np.zeros([num_ids], dtype=int)
-            actual_max = 0
-            max_id = 0
-            used_keys = set()
-            for line in file:
-                k, value = line.split(id_delimiter, maxsplit=1)
-                value = value.rstrip("\n")
-                try:
-                    k = int(k)
-                except ValueError:
-                    raise TypeError(f"{filename} contains non-integer keys")
-                if used_keys.__contains__(k):
-                    raise KeyError(f"{filename} contains duplicated keys")
-                used_keys.add(k)
-                split_ = [int(i) for i in value.split(token_delimiter)]
-                if self.config.get("dataset.filter_start_and_end_token"):
-                    split_ = split_[1:len(split_) - 1]
-                actual_max = max(actual_max, len(split_))
+        if map_ is None:
+            with open(os.path.join(self.folder, filename), "r") as file:
+                dictionary = {}
                 if num_ids and max_tokens:
+                    map_ = np.zeros([num_ids, max_tokens], dtype=int)
+                    lengths_ = np.zeros([num_ids], dtype=int)
+                actual_max = 0
+                max_id = 0
+                used_keys = set()
+                for line in file:
+                    k, value = line.split(id_delimiter, maxsplit=1)
+                    value = value.rstrip("\n")
+                    try:
+                        k = int(k)
+                    except ValueError:
+                        raise TypeError(f"{filename} contains non-integer keys")
+                    if used_keys.__contains__(k):
+                        raise KeyError(f"{filename} contains duplicated keys")
+                    used_keys.add(k)
+                    split_ = [int(i) for i in value.split(token_delimiter)]
+                    if filter_start_and_end_token:
+                        split_ = split_[1:len(split_) - 1]
+                    actual_max = max(actual_max, len(split_))
+                    if num_ids and max_tokens:
+                        map_[k][0:len(split_)] = split_
+                        lengths_[k] = len(split_)
+                    else:
+                        dictionary[k] = split_
+                        max_id = max(max_id, k)
+
+            if num_ids and max_tokens:
+                map_ = np.delete(map_, np.s_[actual_max:map_.shape[1]], 1)
+            else:
+                map_ = np.zeros([max_id + 1, actual_max], dtype=int)
+                lengths_ = np.zeros([max_id + 1], dtype=int)
+                for k, split_ in dictionary.items():
                     map_[k][0:len(split_)] = split_
                     lengths_[k] = len(split_)
-                else:
-                    dictionary[k] = split_
-                    max_id = max(max_id, k)
-
-        if num_ids and max_tokens:
-            map_ = np.delete(map_, np.s_[actual_max:map_.shape[1]], 1)
-        else:
-            map_ = np.zeros([max_id + 1, actual_max], dtype=int)
-            lengths_ = np.zeros([max_id + 1], dtype=int)
-            for k, split_ in dictionary.items():
-                map_[k][0:len(split_)] = split_
-                lengths_[k] = len(split_)
+            if use_pickle:
+                Dataset._pickle_dump_atomic((map_, lengths_, actual_max), pickle_filename)
 
         self.config.log(f"Loaded {map_.shape[0]} token sequences from {key}")
 
@@ -300,7 +330,7 @@ class OLPDataset(Dataset):
         return self.load_quintuples(split)
 
     def load_quintuples(self, key: str) -> Tuple[Tensor, List, List]:
-        "Load or return the triples and alternative mentions with the specified key."
+        """Load or return the triples and alternative mentions with the specified key."""
         if key not in self._triples:
             self.ensure_available(key)
             filename = self.config.get(f"dataset.files.{key}.filename")
@@ -335,11 +365,10 @@ class OLPDataset(Dataset):
 
         seq_len_indexes = None
         use_pickle = self.config.get("dataset.pickle")
-        filter_start_end = self.config.get("dataset.filter_start_and_end_token")
 
         if use_pickle:
             # check if there is a pickled, up-to-date version of the file
-            pickle_suffix = f"train_seq_len_indexes_{filter_start_end}.pckl"
+            pickle_suffix = f"train_seq_len_indexes.pckl"
             pickle_filename = os.path.join(self.folder, pickle_suffix)
             seq_len_indexes = Dataset._pickle_load_if_uptodate(None, pickle_filename, filename)
         if seq_len_indexes is None:

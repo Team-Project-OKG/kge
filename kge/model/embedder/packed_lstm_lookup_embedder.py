@@ -1,11 +1,12 @@
 from torch import Tensor
 import torch.nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from kge import Config, Dataset
 from kge.model import MentionEmbedder
 
 
-class LstmLookupEmbedder(MentionEmbedder):
+class PackedLstmLookupEmbedder(MentionEmbedder):
 
     def __init__(
             self,
@@ -25,24 +26,14 @@ class LstmLookupEmbedder(MentionEmbedder):
         self._encoder_lstm = torch.nn.LSTM(
             input_size=self.dim,
             hidden_size=self.hidden_dim,
-            dropout=0,
-            batch_first=True
+            batch_first=True,
+            dropout=0
         )
 
     def _token_embed(self, token_indexes):
         token_embeddings = self.embed_tokens(token_indexes.long())
-        lstm_output, hn = self._encoder_lstm(token_embeddings)
-        num_tokens = (token_indexes > 0).sum(dim=1)
-        return lstm_output[torch.arange(0, lstm_output.shape[0]), num_tokens - 1]
-
-    #def _token_embed(self, indexes: Tensor):
-    #    "Combine token embeddings to one embedding for a mention."
-    #    var = self._forward(super().embed(indexes), self._token_lookup[indexes])
-     #   return var
-    #    #raise NotImplementedError
-   # def embed(self, indexes: Tensor) -> Tensor:
-   #     return self._forward(super().embed(indexes), self._token_lookup[indexes])
-
-    # return the pooled token entity/relation embedding vectors
-   # def embed_all(self) -> Tensor:
-   #     return self._forward(super().embed_all(), self._token_lookup)
+        lengths = (token_indexes > 0).sum(dim=1).cpu()
+        padded_sequence = pack_padded_sequence(token_embeddings, lengths, batch_first=True, enforce_sorted=False)
+        padded_output, _ = self._encoder_lstm(padded_sequence)
+        output, _ = pad_packed_sequence(padded_output, batch_first=True)
+        return output[torch.arange(0, output.shape[0]), lengths - 1]

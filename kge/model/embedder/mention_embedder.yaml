@@ -1,0 +1,36 @@
+# Settings that must be specified for any embedder inheriting from mention embedder
+# Note: This yaml itself is never used, but rather provides the list of parameters and explanations.
+
+any_mention_embedder:
+
+  # Whether the embedder requires a start and end token as padding, e.g. False for LSTM and True for Bigram based on
+  # CNN. The tokens must be present in the token mapping of the dataset, and should be specified as padding indexes in
+  # the yaml of the dataset.
+  requires_start_and_end_token: False
+
+  # To speed up embedding and training, a mention embedder can partition the data within one batch based on sequence
+  # length. Padding is removed for each bin as much as possible.
+  bin_within_batch: False
+  # The minimum size of each bin. 0 will create a bin for each length and thus remove all padding, but decrease
+  # performance due to decreased parallelization.
+  bin_size: 0
+
+
+  # Parameters related to using pre-trained word embeddings.
+  pretrained:
+    # Flag or whether to use pre-trained word embeddings or not.
+    use: False
+    # Information about the file to receive pre-trained embeddings from. Must be in word2vec format.
+    file:
+      # file name (without file type)
+      name: glove.840B.300d_word2vec
+      # file type
+      type: txt
+    # How to deal with out of vocabulary errors:
+    #  - random: Use random embedding initialized based on parameter "initialize" (inherited from Lookup Embedder)
+    oov_tactic: 'random'
+    # Flag whether to not change embeddings during training
+    freeze: False
+    # Save / load dataset specific tensor of token embeddings based on the given file. The pickle can be used as a
+    # starting point for further training jobs, speeding up initialization of a mention embedder.
+    use_pickle: True

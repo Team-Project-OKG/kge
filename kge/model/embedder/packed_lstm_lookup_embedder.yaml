@@ -1,12 +1,14 @@
-# Stores explicitly an embedding for each object in a lookup table. See
-# https://pytorch.org/docs/stable/nn.html#torch.nn.Embedding
-transformer_lookup_embedder:
-  class_name: TransformerLookupEmbedder
+packed_lstm_lookup_embedder:
+  class_name: PackedLstmLookupEmbedder
 
-  # parameters specific to Transformer Lookup Embedder
+  # parameters specific to Packed LSTM Lookup Embedder
+
+  # Flag whether to use the dimensionality of embeddings as the dimensionality of the hidden (and output) state of the
+  # LSTM. If false, set dimensionality of hidden state with "hidden_dim".
+  emb_dim_as_hidden_dim: True
+  hidden_dim: 0
 
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
-  #TODO: Check if it really does not need
   requires_start_and_end_token: False
 
   bin_within_batch: False
@@ -22,9 +24,7 @@ transformer_lookup_embedder:
     use_pickle: True
 
   # settings for lookup embedders (see lookup_embedder.yaml for explanations)
-  dim: 128
-  nhead: 8
-  num_layers: 6
+  dim: 100
   initialize: normal_
   initialize_args:
     +++: +++
