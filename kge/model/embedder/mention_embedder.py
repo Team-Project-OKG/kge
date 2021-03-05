@@ -49,7 +49,6 @@ class MentionEmbedder(LookupEmbedder):
         if enable_bpe:
             self._sub_token_embedder = BPESubTokenEmbedder(dataset.bpe_vocab, configuration_key)
 
-    def lookup_tokens(self, indexes: Tensor) -> Tensor: #TODO: must be reviewed
         if self.get_option("pretrained.use"):
             self._init_pretrained_word_emb()
         self._padding_indexes = self.config.get("dataset.padding_indexes")
