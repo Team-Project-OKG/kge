@@ -25,7 +25,7 @@ class MentionEmbedder(LookupEmbedder):
     ):
         super().__init__(config, dataset, configuration_key, vocab_size, init_for_load_only=init_for_load_only)
 
-        enable_bpe = True #config.get("dataset.byte_pair_encoding")
+        enable_bpe = config.get("dataset.byte_pair_encoding")
         if "relation" in self.configuration_key:
             self._token_lookup = self.dataset._mentions_to_token_ids["relations"].to(self.config.get("job.device"))
         elif "entity" in self.configuration_key:
@@ -40,9 +40,8 @@ class MentionEmbedder(LookupEmbedder):
 
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
         # Additionally split up tokens into sub-tokens and embed them
-        if True: #self.config.get("dataset.byte_pair_encoding"):
+        if self.config.get("dataset.byte_pair_encoding"):
             sub_token_indexes = self._sub_token_embedder.get_sub_tokens_from_tokens(token_indexes)
-
             emb = self._embeddings(sub_token_indexes)
             return emb
         else:

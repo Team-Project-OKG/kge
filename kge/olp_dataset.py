@@ -108,23 +108,25 @@ class OLPDataset(Dataset):
             dataset.bpe_vocab = BytePairEncodingVocab(dataset, iter_entities, iter_relations)
         return dataset
 
+
     #def sub_token_vocab_size_entities(self) -> int:
     def vocab_size_entities(self) -> int:
         """Return the number of embeddings for sub-tokens given the dataset.
         Necessary for byte-pair-encoding"""
+        
         if hasattr(self, 'bpe_vocab'):
-            return self.bpe_vocab.num_entity_sub_tokens
+            return self.bpe_vocab.num_ent_sub_tokens
         else:
-            return self.vocab_size_entities()
+            return self.num_tokens_entities()
 
     #def sub_token_vocab_size_relations(self) -> int:
-    def size_relations(self) -> int:
+    def vocab_size_relations(self) -> int:
         """Return the number of embeddings for sub-tokens given the dataset.
         Necessary for byte-pair-encoding"""
         if hasattr(self, 'bpe_vocab'):
-            return self.bpe_vocab.num_relation_sub_tokens
+            return self.bpe_vocab.num_rel_sub_tokens
         else:
-            return self.vocab_size_relations()
+            return self.num_tokens_relations()
 
     '''
     def vocab_size_entities(self) -> int:
