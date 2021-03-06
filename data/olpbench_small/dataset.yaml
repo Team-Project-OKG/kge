@@ -13,12 +13,12 @@ dataset:
   files.relation_id_token_ids.type: sequence_map
 
   name: olpbench-small
-  num_entities: 367
-  num_relations: 142
-  num_tokens_entities: 491
-  num_tokens_relations: 195
-  max_tokens_per_entity: 7
-  max_tokens_per_relation: 9
+#  num_entities: 367
+#  num_relations: 142
+#  num_tokens_entities: 49
+#  num_tokens_relations: 195
+#  max_tokens_per_entity: 7
+#  max_tokens_per_relation: 9
 
   files.test.filename: test_data.del
   files.test.size: 10
@@ -32,6 +32,18 @@ dataset:
   files.valid.type: quintuples
 
   pickle: True
+
+  # Whether to use byte-pair encoding - only available for OLPDatasets. Split up
+  # the tokens into sub-tokens and embed those.
+  # Create separate sub-token vocabularies for token sequences of entities and
+  # relations
+  # 0 iterations_entities/relations: character-level sub-tokens. High memory during
+  # training, very low preparation runtime.
+  # Max iterations: If no more bigrams can be found -> token-level sub-tokens
+  # lower memory during training, high preparation runtime
+  byte_pair_encoding: True
+  iterations_entities: 100
+  iterations_relations: 100
 
   # list of all tokens that should be regarded as padding, i.e. receive an embedding of 0
   padding_indexes: [0, 2, 3]

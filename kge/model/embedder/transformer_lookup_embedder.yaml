@@ -9,6 +9,9 @@ transformer_lookup_embedder:
   #TODO: Check if it really does not need
   requires_start_and_end_token: False
 
+  cut_padding_in_batch: True
+  set_padding_embeddings_to_0: True
+
   bin_within_batch: True
   bin_size: 50
 
