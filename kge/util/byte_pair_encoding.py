@@ -99,7 +99,6 @@ class BytePairEncodingVocab:
         self.rel_sub_token_ids = {**special_tokens, **index_character_map_rel.get_dict()}
         self.num_rel_sub_tokens = len(self.rel_sub_token_ids)
         #output_str_rel = [[self.rel_sub_token_ids[y] for y in x] for idx, x in self.rel_sub_token_lookup.items()]
-        x = 0
 
     def run_bpe_num(self, iterations,
                     sub_tokens,
