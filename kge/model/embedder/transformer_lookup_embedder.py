@@ -19,22 +19,21 @@ class TransformerLookupEmbedder(MentionEmbedder):
             config, dataset, configuration_key, vocab_size, init_for_load_only=init_for_load_only)
 
         self._dimensions = self.get_option("dim")
-        encoder_layer = torch.nn.TransformerEncoderLayer(d_model=self._dimensions, nhead=self.get_option("nhead"))
+        encoder_layer = torch.nn.TransformerEncoderLayer(d_model=self._dimensions, nhead=self.get_option("nhead"), dim_feedforward=512)
         self._encoder_transformer = torch.nn.TransformerEncoder(encoder_layer, self.get_option("num_layers"))
 
     def _token_embed(self, token_indexes):
         #switch batch and sequence dimension to match input format
         token_embeddings = self.embed_tokens(token_indexes.long())
         transformer_input = token_embeddings.permute(1, 0, 2)
-        #last_state = (token_indexes > 0).sum(1) - 1
-        encoded = self._encoder_transformer(transformer_input)
-        #encoded = encoded[last_state] #[token_indexes[0].size()[0] - 1]
-        return encoded[-1]
-        #return self._encoder_transformer(transformer_input)[token_indexes[0].size()[0] - 1]
+        last_state = (token_indexes > 0).sum(dim= 1) - 1
+        #src_padding_mask = (token_indexes == 0)
+        encoded = self._encoder_transformer(transformer_input).permute(1, 0, 2)
+        return encoded[torch.arange(0, encoded.shape[0]), last_state]
 
     #def embed(self, indexes: Tensor) -> Tensor:
     #    return self._forward(super().embed(indexes), self._token_lookup[indexes])
 
     # return the pooled token entity/relation embedding vectors
    # def embed_all(self) -> Tensor:
-   #     return self._forward(super().embed_all(), self._token_lookup)
+   #     return self._forward(super().embed_all(), self._token_lookup)"""
