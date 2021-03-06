@@ -49,18 +49,26 @@ class MentionEmbedder(LookupEmbedder):
         if enable_bpe:
             self._sub_token_embedder = BPESubTokenEmbedder(dataset.bpe_vocab, configuration_key)
 
+        self._cut_padding = self.get_option("cut_padding_in_batch")
+
         if self.get_option("pretrained.use"):
             self._init_pretrained_word_emb()
+
         self._padding_indexes = self.config.get("dataset.padding_indexes")
+        self._reset_padding = self.get_option("set_padding_embeddings_to_0")
         self.reset_padding_index()
 
     # set embeddings weights at padding, mention start and mention end index to 0
     def reset_padding_index(self):
-        self._embeddings.weight.data[self._padding_indexes] = 0
+        if self._reset_padding:
+            self._embeddings.weight.data[self._padding_indexes] = 0
 
     def lookup_tokens(self, indexes: Tensor) -> Tensor:
         token_seq = self._token_lookup[indexes]
-        return token_seq[:, 0:torch.max(torch.nonzero(token_seq), dim=0).values[1]+1]
+        if self._cut_padding:
+            return token_seq[:, 0:torch.max(torch.nonzero(token_seq), dim=0).values[1]+1]
+        else:
+            return token_seq
 
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
         # Additionally split up tokens into sub-tokens and embed them

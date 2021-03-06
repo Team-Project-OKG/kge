@@ -9,6 +9,7 @@ from kge.model.embedder.unigram_lookup_embedder import UnigramLookupEmbedder
 from kge.model.embedder.bigram_lookup_embedder import BigramLookupEmbedder
 from kge.model.embedder.lstm_lookup_embedder import LstmLookupEmbedder
 from kge.model.embedder.packed_lstm_lookup_embedder import PackedLstmLookupEmbedder
+from kge.model.embedder.padding_lstm_lookup_embedder import PaddingLstmLookupEmbedder
 from kge.model.embedder.transformer_lookup_embedder import TransformerLookupEmbedder
 
 

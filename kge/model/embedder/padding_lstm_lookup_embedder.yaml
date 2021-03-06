@@ -1,7 +1,7 @@
-packed_lstm_lookup_embedder:
-  class_name: PackedLstmLookupEmbedder
+padding_lstm_lookup_embedder:
+  class_name: PaddingLstmLookupEmbedder
 
-  # parameters specific to Packed LSTM Lookup Embedder
+  # parameters specific to Padding LSTM Lookup Embedder
 
   # Flag whether to use the dimensionality of embeddings as the dimensionality of the hidden (and output) state of the
   # LSTM. If false, set dimensionality of hidden state with "hidden_dim".
@@ -11,8 +11,8 @@ packed_lstm_lookup_embedder:
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
   requires_start_and_end_token: False
 
-  cut_padding_in_batch: True
-  set_padding_embeddings_to_0: True
+  cut_padding_in_batch: False
+  set_padding_embeddings_to_0: False
 
   bin_within_batch: False
   bin_size: 0
