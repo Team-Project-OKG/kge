@@ -49,8 +49,8 @@ dataset:
   # Max iterations: If no more bigrams can be found -> token-level sub-tokens
   # lower memory during training, high preparation runtime
   byte_pair_encoding: False
-  iterations_entities: 10
-  iterations_relations: 10
+  iterations_entities: 1000
+  iterations_relations: 1000
 
   # list of all tokens that should be regarded as padding, i.e. receive an embedding of 0
   padding_indexes: [0, 2, 3]
