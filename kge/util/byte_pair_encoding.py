@@ -167,7 +167,7 @@ class BytePairEncodingVocab:
         unique_delimiter = -1
         intersection = (flat_tokens_num == replace_bigram[0]) & torch.roll(flat_tokens_num == replace_bigram[1], shifts=-1)
         idxs_replace_tensor = torch.where(intersection)[0]
-        merged_bigram = np.array([len(index_character_map) +  num_special_tokens])
+        merged_bigram = np.array([len(index_character_map) + num_special_tokens])
         if replace_bigram[1] == end_token_idx:
             # append -1 as unique delimiter to merge sub-token sequences later
             merged_bigram = np.append(merged_bigram, unique_delimiter)

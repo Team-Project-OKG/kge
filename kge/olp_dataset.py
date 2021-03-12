@@ -111,10 +111,6 @@ class OLPDataset(Dataset):
                 iter_entities = config.get("dataset.iterations_entities")
                 iter_relations = config.get("dataset.iterations_relations")
                 dataset.bpe_vocab = BytePairEncodingVocab(dataset, iter_entities, iter_relations)
-                # Todo: determine max length
-                #self._max_tokens_per_relation = dataset.bpe_vocab.
-                #self._max_tokens_per_entity =
-
                 # create mappings of entity ids to a series of sub token ids
                 dataset.entity_mentions_to_sub_token_ids()
                 dataset.relation_mentions_to_sub_token_ids()
@@ -131,7 +127,6 @@ class OLPDataset(Dataset):
     def vocab_size_entities(self) -> int:
         """Return the number of embeddings for sub-tokens given the dataset.
         Necessary for byte-pair-encoding"""
-        
         if hasattr(self, 'bpe_vocab'):
             return self.bpe_vocab.num_ent_sub_tokens
         else:
@@ -220,10 +215,24 @@ class OLPDataset(Dataset):
         """
         return self.map_indexes(indexes, "relation_token_ids")
 
+    def get_mention_to_token_id_map(self, key: str):
+        if "entity" in key:
+            if hasattr(self, 'bpe_vocab') and self.config.get("dataset.byte_pair_encoding"):
+                return self.entity_mentions_to_sub_token_ids()
+            else:
+                return self.entity_mentions_to_token_ids()
+        elif "relation" in key:
+            if hasattr(self, 'bpe_vocab') and self.config.get("dataset.byte_pair_encoding"):
+                return self.relation_mentions_to_sub_token_ids()
+            else:
+                return self.relation_mentions_to_token_ids()
+        else:
+            raise NameError(f"Key '{self.configuration_key}' has to contain 'entity' or 'relation'!")
+
+
     # create mappings of entity mentions to a series of token ids
     def entity_mentions_to_sub_token_ids(self):
-        if "entities" not in self._alternative_object_mentions:
-            #key = f"entity_id_sub_token_ids_{self.config.get('dataset.iterations_entities')}"
+        if "entities" not in self._mentions_to_token_ids:
             key = "entity_id_token_ids"
             map_, lengths_, actual_max = self.load_sub_token_sequences(key, self._num_entities)
             self._mentions_to_token_ids["entities"] = torch.from_numpy(map_)
@@ -234,8 +243,7 @@ class OLPDataset(Dataset):
 
     # create mappings of entity mentions to a series of token ids
     def relation_mentions_to_sub_token_ids(self):
-        if "relations" not in self._alternative_object_mentions:
-            #key = f"relation_id_sub_token_ids_{self.config.get('dataset.iterations_relations')}"
+        if "relations" not in self._mentions_to_token_ids:
             key = "relation_id_token_ids"
             map_, lengths_, actual_max = self.load_sub_token_sequences(key, self._num_relations)
             self._mentions_to_token_ids["relations"] = torch.from_numpy(map_)
@@ -322,7 +330,7 @@ class OLPDataset(Dataset):
 
     # create mappings of entity mentions to a series of token ids
     def entity_mentions_to_token_ids(self):
-        if "entities" not in self._alternative_object_mentions:
+        if "entities" not in self._mentions_to_token_ids:
             map_, lengths_, actual_max = self.load_token_sequences("entity_id_token_ids", self._num_entities,
                                                          self._max_tokens_per_entity)
             self._mentions_to_token_ids["entities"] = torch.from_numpy(map_)
@@ -332,7 +340,7 @@ class OLPDataset(Dataset):
 
     # create mappings of relation mentions to a series of token ids_nr_alternative_subjects
     def relation_mentions_to_token_ids(self):
-        if "relations" not in self._alternative_object_mentions:
+        if "relations" not in self._mentions_to_token_ids:
             map_, lengths_, actual_max = self.load_token_sequences("relation_id_token_ids", self._num_relations,
                                                          self._max_tokens_per_relation)
             self._mentions_to_token_ids["relations"] = torch.from_numpy(map_)
