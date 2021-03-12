@@ -39,18 +39,17 @@ dataset:
   #files.valid.type: triples
 
   pickle: True
-
   # Whether to use byte-pair encoding - only available for OLPDatasets. Split up
   # the tokens into sub-tokens and embed those.
   # Create separate sub-token vocabularies for token sequences of entities and
   # relations
-  # 0 iterations_entities/relations: character-level sub-tokens. High memory during
-  # training, very low preparation runtime.
+  # 0 iterations_entities/relations: character-level sub-tokens. Higher memory during
+  # training, lower preparation time.
   # Max iterations: If no more bigrams can be found -> token-level sub-tokens
-  # lower memory during training, high preparation runtime
-  byte_pair_encoding: False
-  iterations_entities: 1000
-  iterations_relations: 1000
+  # lower memory during training, higher preparation time
+  #byte_pair_encoding: True
+  #iterations_entities: 350
+  #iterations_relations: 200
 
   # list of all tokens that should be regarded as padding, i.e. receive an embedding of 0
   padding_indexes: [0, 2, 3]
