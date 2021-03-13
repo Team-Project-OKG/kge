@@ -2,8 +2,22 @@ import: [packed_lstm_lookup_embedder]                                         #!
 
 # general settings for the hyperparameter optimization job
 job.type: search
-search.type: grid
+search.type: ax
 valid.metric: mean_reciprocal_rank_filtered
+
+ax_search:
+  num_trials: 15
+  num_sobol_trials: 15
+  parameters:
+    - name: train.optimizer.default.args.lr
+      type: range
+      bounds: [0.01, 0.2]
+    - name: train.optimizer.default.args.weight_decay
+      type: range
+      bounds: [0.0000000001, 0.000001]
+    - name: packed_lstm_lookup_embedder.dropout
+      type: range
+      bounds: [0.0, 0.1]
 
 
 # settings for the dataset to use
@@ -20,35 +34,18 @@ complex:
 
 packed_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
   initialize: xavier_uniform_ # is Glorot initialization
+  bin_within_batch: False  # if True, then bin_size is also activated
   token_embedding_model:
     use: True
     name: prajjwal1/bert-mini
     precache: 15000
-  pretrained:
-    use: False
-    file:
-      name: bert-tokens
-      type: txt
   dim: 256
   num_layers: 2
-
-random_seed:
-  # Seed used to initialize each of the PRNGs below in case they do not have
-  # their own seed specified. The actual seed used computed from the value given
-  # here and the name of the PRNG (e.g., python, torch, ...). If -1, disable
-  # default seeding.
-  default: 1
-
-  python: 1
-  torch: 1
-  numpy: 1
-  numba: 1
-
 
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
-  max_epochs: 2
+  max_epochs: 10
   batch_size: 4096
   subbatch_auto_tune: True
   optimizer: Adagrad
@@ -67,13 +64,10 @@ negative_sampling:
   with_replacement: False
   implementation: batch
   samples_within_batch: True
-  num_samples: # can be ignored if samples_within_batch is True
-    s: 100
-    #p: 0          # -1 means: same as s
-    #o: -1
-
-valid:
-  every: 1
+  #num_samples:
+  #  s: 8192
+  #  p: 0          # -1 means: same as s
+  #  o: -1
 
 
 # settings for the evaluation job

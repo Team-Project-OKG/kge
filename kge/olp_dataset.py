@@ -369,6 +369,10 @@ class OLPDataset(Dataset):
             pickle_result = Dataset._pickle_load_if_uptodate(None, pickle_filename, filename)
             if pickle_result is not None:
                 map_, lengths_, actual_max = pickle_result
+            else:
+                map_ = None
+                lengths_ = None
+                actual_max = None
         else:
             map_ = None
             lengths_ = None

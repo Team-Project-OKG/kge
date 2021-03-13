@@ -83,7 +83,7 @@ class MentionEmbedder(LookupEmbedder):
             return token_seq
 
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
-    if self.get_option("token_embedding_model.use"):
+        if self.get_option("token_embedding_model.use"):
             if self._precached_embeddings is not None:
                 original_token_indexes = token_indexes.clone()
                 original_shape = token_indexes.shape
