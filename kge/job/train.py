@@ -457,9 +457,11 @@ class TrainingJob(TrainingOrEvaluationJob):
             batch_optimizer_time += time.time()
 
             # reset embedding at padding index if mention embedder is used
-            if isinstance(self.model._relation_embedder, MentionEmbedder):
+            if isinstance(self.model._relation_embedder, MentionEmbedder) and \
+                    not self.config.get(self.config.get(self.config.get("model")+".relation_embedder.type")+".token_embedding_model.use"):
                 self.model._relation_embedder.reset_padding_index()
-            if isinstance(self.model._entity_embedder, MentionEmbedder):
+            if isinstance(self.model._entity_embedder, MentionEmbedder) and \
+                    not self.config.get(self.config.get(self.config.get("model")+".entity_embedder.type")+".token_embedding_model.use"):
                 self.model._entity_embedder.reset_padding_index()
 
             # update batch trace with the results
@@ -1125,11 +1127,12 @@ class TrainingJobNegativeSampling(TrainingJob):
         batch_negative_samples = batch["negative_samples"]
         batch_size = len(batch["triples"])
         subbatch_size = len(triples)
-        result.prepare_time += time.time()
         labels = batch["labels"]  # reuse b/w subbatches
 
         pre_scores = OlpNegativeSample.pre_score_(self.model, triples)  # pre_scores = [_po, spo, sp_]
         loss_value = {}
+
+        result.prepare_time += time.time()
 
         # process the subbatch for each slot separately
         for slot in [S, P, O]:

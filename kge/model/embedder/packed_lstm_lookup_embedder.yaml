@@ -8,11 +8,19 @@ packed_lstm_lookup_embedder:
   emb_dim_as_hidden_dim: True
   hidden_dim: 0
 
+  # Number of layers for LSTM. Default is 1 - no stacking
+  num_layers: 1
+
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
   requires_start_and_end_token: False
 
   bin_within_batch: False
   bin_size: 0
+
+  token_embedding_model:
+    use: False
+    name: distilbert
+    precache: 0
 
   pretrained:
     use: False

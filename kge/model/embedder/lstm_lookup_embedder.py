@@ -22,17 +22,21 @@ class LstmLookupEmbedder(MentionEmbedder):
             self.hidden_dim = self.dim
         else:
             self.hidden_dim = self.get_option("hidden_dim")
+
+        self.num_layers = self.get_option("num_layers")
+
         self._encoder_lstm = torch.nn.LSTM(
             input_size=self.dim,
             hidden_size=self.hidden_dim,
             dropout=0,
-            batch_first=True
+            batch_first=True,
+            num_layers=self.num_layers
         )
 
     def _token_embed(self, token_indexes):
         token_embeddings = self.embed_tokens(token_indexes.long())
         lstm_output, hn = self._encoder_lstm(token_embeddings)
-        num_tokens = (token_indexes > 0).sum(dim=1)
+        num_tokens = (~ (token_indexes == 0)).sum(dim=1)
         return lstm_output[torch.arange(0, lstm_output.shape[0]), num_tokens - 1]
 
     #def _token_embed(self, indexes: Tensor):
