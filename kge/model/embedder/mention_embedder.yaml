@@ -8,6 +8,13 @@ any_mention_embedder:
   # the yaml of the dataset.
   requires_start_and_end_token: False
 
+  # Whether to cut as much padding as possible within the batch while still remaining the tensor structure. E.g. max
+  # token length in the dataset is 10, but only 8 within a given batch. Then, the last two paddings will be removed
+  # in the given batch.
+  cut_padding_in_batch: True
+  # Whether to ensure that the embeddings of the padding indexes specified in the dataset.yaml are 0.
+  set_padding_embeddings_to_0: True
+
   # To speed up embedding and training, a mention embedder can partition the data within one batch based on sequence
   # length. Padding is removed for each bin as much as possible.
   bin_within_batch: False

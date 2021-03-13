@@ -14,6 +14,9 @@ packed_lstm_lookup_embedder:
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
   requires_start_and_end_token: False
 
+  cut_padding_in_batch: True
+  set_padding_embeddings_to_0: True
+
   bin_within_batch: False
   bin_size: 0
 

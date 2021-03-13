@@ -15,7 +15,6 @@ import numpy as np
 from kge import Config, Dataset
 from kge.job import Job, TrainingOrEvaluationJob
 from kge.model import KgeModel
-from kge.model import MentionEmbedder
 
 from kge.util import KgeLoss, KgeOptimizer, KgeSampler, KgeLRScheduler
 from kge.util.io import load_checkpoint
@@ -456,14 +455,6 @@ class TrainingJob(TrainingOrEvaluationJob):
                 self.optimizer.step()
             batch_optimizer_time += time.time()
 
-            # reset embedding at padding index if mention embedder is used
-            if isinstance(self.model._relation_embedder, MentionEmbedder) and \
-                    not self.config.get(self.config.get(self.config.get("model")+".relation_embedder.type")+".token_embedding_model.use"):
-                self.model._relation_embedder.reset_padding_index()
-            if isinstance(self.model._entity_embedder, MentionEmbedder) and \
-                    not self.config.get(self.config.get(self.config.get("model")+".entity_embedder.type")+".token_embedding_model.use"):
-                self.model._entity_embedder.reset_padding_index()
-
             # update batch trace with the results
             self.current_trace["batch"].update(
                 {
@@ -597,7 +588,8 @@ class TrainingJob(TrainingOrEvaluationJob):
             subbatch_end = min(subbatch_start + max_subbatch_size, batch_size)
             subbatch_slice = slice(subbatch_start, subbatch_end)
             if self.config.get("negative_sampling.samples_within_batch"):
-                self._process_subbatch_batch_sampling(batch_index, batch, subbatch_slice, result)
+                pre_scores = OlpNegativeSample.pre_score_(self.model, batch["triples"])
+                self._process_subbatch_batch_sampling(batch_index, batch, subbatch_slice, result, pre_scores)
             else:
                 self._process_subbatch(batch_index, batch, subbatch_slice, result)
 
@@ -1120,6 +1112,7 @@ class TrainingJobNegativeSampling(TrainingJob):
         batch,
         subbatch_slice,
         result: TrainingJob._ProcessBatchResult,
+        pre_scores,
     ):
         # prepare
         result.prepare_time -= time.time()
@@ -1128,8 +1121,9 @@ class TrainingJobNegativeSampling(TrainingJob):
         batch_size = len(batch["triples"])
         subbatch_size = len(triples)
         labels = batch["labels"]  # reuse b/w subbatches
+        pre_scores = pre_scores
 
-        pre_scores = OlpNegativeSample.pre_score_(self.model, triples)  # pre_scores = [_po, spo, sp_]
+        #pre_scores = OlpNegativeSample.pre_score_(self.model, triples)  # pre_scores = [_po, spo, sp_]
         loss_value = {}
 
         result.prepare_time += time.time()
