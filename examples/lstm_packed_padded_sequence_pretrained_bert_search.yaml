@@ -6,8 +6,8 @@ search.type: ax
 valid.metric: mean_reciprocal_rank_filtered
 
 ax_search:
-  num_trials: 15
-  num_sobol_trials: 15
+  num_trials: 10
+  num_sobol_trials: 10
   parameters:
     - name: train.optimizer.default.args.lr
       type: range
