@@ -133,8 +133,6 @@ class OLPDataset(Dataset):
         Runs Byte-Pair Encoding, creates sub-token vocab to lookup sub-token sequences from
         token sequences. Initializes Byte-Pair encoding parameters for dataset
         """
-        #iter_entities = self.config.get("dataset.iterations_entities")
-        #iter_relations = self.config.get("dataset.iterations_relations")
         self.bpe_vocab = BytePairEncodingVocab(self, iterations_ent, iterations_rel)
         self.entity_mentions_to_sub_token_ids(overwrite=True)  # ensure execution
         self.relation_mentions_to_sub_token_ids(overwrite=True)
@@ -369,7 +367,8 @@ class OLPDataset(Dataset):
             pickle_result = Dataset._pickle_load_if_uptodate(None, pickle_filename, filename)
             if pickle_result is not None:
                 map_, lengths_, actual_max = pickle_result
-        else:
+
+        if not use_pickle or pickle_result is None:
             map_ = None
             lengths_ = None
             actual_max = None
