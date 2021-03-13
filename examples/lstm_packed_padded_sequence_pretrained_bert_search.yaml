@@ -40,7 +40,7 @@ packed_lstm_lookup_embedder:                                                  #!
     name: prajjwal1/bert-mini
     precache: 15000
   dim: 256
-  num_layers: 2
+  num_layers: 1
 
 # settings for the training job of each hyperparameter combination
 train:
