@@ -46,18 +46,17 @@ class BytePairEncodingVocab:
     Input: list of entity/relation token strings
 
     Algorithm:
-    Stop if number of max. iteration or desired number of tokens are reached
-        Count frequency of each word
-        Split words into characters
-        Count frequency of each consecutive byte-pair
-        Find most frequent byte-pair
-        Merge most frequent byte-pair into new token
-        Replace individual character pairs by new, most frequent token
+        Split words into characters and append unique end token to each word
+        Stop if number of max. iteration or desired number of tokens are reached
+            Count frequency of each consecutive byte-pair
+            Find most frequent byte-pair
+            Merge most frequent byte-pair into new token
+            Replace individual character pairs by new, most frequent token in vocab
 
     Output:
-    (ent/rel)_sub_token_lookup: Lookup of token index (int) -> list of subtoken indexes
-    num_(ent/rel)_sub_tokens: unique number of subtokens (int)
-    (ent/rel)_sub_token_ids: Vocabulary of subtoken indexes to their string representation (dict)
+    (ent/rel)_subtoken_lookup: Lookup of token index (int) -> list of subtoken indexes
+    num_(ent/rel)_subtokens: unique number of subtokens (int)
+    (ent/rel)_subtoken_ids: Vocabulary of subtoken indexes to their string representation (dict)
     """
 
     def __init__(self,
@@ -66,21 +65,21 @@ class BytePairEncodingVocab:
                  iterations_relations
                  ):
 
-        self.ent_sub_token_ids = None
-        self.rel_sub_token_ids = None
-        self.num_ent_sub_tokens = None
-        self.num_rel_sub_tokens = None
-        self.ent_sub_token_lookup = None
-        self.rel_sub_token_lookup = None
+        self.ent_subtoken_ids = None
+        self.rel_subtoken_ids = None
+        self.num_ent_subtokens = None
+        self.num_rel_subtokens = None
+        self.ent_subtoken_lookup = None
+        self.rel_subtoken_lookup = None
 
         # run bpe and init vocab
-        self.create_sub_token_vocabs(olp_dataset, iterations_entities, iterations_relations)
+        self.create_subtoken_vocabs(olp_dataset, iterations_entities, iterations_relations)
 
-    def create_sub_token_vocabs(self, olp_dataset, iterations_entities, iterations_relations):
+    def create_subtoken_vocabs(self, olp_dataset, iterations_entities, iterations_relations):
         entity_tokens_str = olp_dataset._meta['entity_token_ids']
         relation_tokens_str = olp_dataset._meta['relation_token_ids']
         delimiter = -1
-        end_sub_token = '</w>'
+        end_subtoken = '</w>'
         device = olp_dataset.config.get("job.device")
         num_special_tokens = 4  # '[unmapped]', '[unseen]', '[begin]', '[end]'
         # exclude these tokens from byte-pair encoding
@@ -90,89 +89,90 @@ class BytePairEncodingVocab:
         # get vocabulary, add stop word '</w>' at the end of each token
         olp_dataset.config.log("Starting byte-pair encoding for entities...")
         time_ent_start = time.time()
-        entity_tokens = [' '.join(x) + ' ' + end_sub_token for x in entity_tokens_str[num_special_tokens:]]
+        entity_tokens = [' '.join(x) + ' ' + end_subtoken for x in entity_tokens_str[num_special_tokens:]]
         entity_tokens_1d = np.concatenate([np.array(x.split()) for x in entity_tokens])
         unique_characters = np.unique(entity_tokens_1d)
         # use a bidirectional map to update lookups and their inverse simultaneously
         # map index to sub-tokens and inverse
         index_character_map_ent = Bidict({idx + num_special_tokens: x for idx, x in enumerate(unique_characters)})
-        sub_tokens_ent = torch.Tensor([index_character_map_ent.inverse[x][0] for x in entity_tokens_1d]).to(device)
-        self.ent_sub_token_lookup, index_character_map_ent, iter_ent = \
-            self.run_bpe(iterations_entities, sub_tokens_ent, index_character_map_ent, end_sub_token, delimiter, num_special_tokens)
-        self.ent_sub_token_lookup = {**{key: [key] for key in special_tokens}, **self.ent_sub_token_lookup}
-        self.ent_sub_token_ids = {**special_tokens, **index_character_map_ent.get_dict()}  # add special tokens again
-        self.num_ent_sub_tokens = len(self.ent_sub_token_ids)
+        subtokens_ent = torch.Tensor([index_character_map_ent.inverse[x][0] for x in entity_tokens_1d]).to(device)
+        self.ent_subtoken_lookup, index_character_map_ent, iter_ent = \
+            self.run_bpe(iterations_entities, subtokens_ent, index_character_map_ent, end_subtoken, delimiter, num_special_tokens)
+        self.ent_subtoken_lookup = {**{key: [key] for key in special_tokens}, **self.ent_subtoken_lookup}
+        self.ent_subtoken_ids = {**special_tokens, **index_character_map_ent.get_dict()}  # add special tokens again
+        self.num_ent_subtokens = len(self.ent_subtoken_ids)
         time_ent_end = time.time()
-        #output_str_ent = [[self.ent_sub_token_ids[y] for y in x] for idx, x in self.ent_sub_token_lookup.items()] # restore strings from subtokens
+        #output_str_ent = [[self.ent_subtoken_ids[y] for y in x] for idx, x in self.ent_subtoken_lookup.items()] # restore strings from subtokens
         olp_dataset.config.log(f"Ran {iter_ent} iterations of byte-pair encoding for entities.\n"
-              f"Found {self.num_rel_sub_tokens} unique subtokens in {time_ent_end - time_ent_start:.2f}s")
+              f"Found {self.num_ent_subtokens} unique subtokens in {time_ent_end - time_ent_start:.2f}s")
 
         # Byte-Pair-Encoding for relations
         # get vocabulary, add stop word '</w>' at the end of each token
         olp_dataset.config.log(f"Starting byte-pair encoding for relations...")
         time_rel_start = time.time()
-        relation_tokens = [' '.join(x) + ' ' + end_sub_token for x in relation_tokens_str[num_special_tokens:]]
+        relation_tokens = [' '.join(x) + ' ' + end_subtoken for x in relation_tokens_str[num_special_tokens:]]
         relation_tokens_1d = np.concatenate([np.array(x.split()) for x in relation_tokens])
         rel_unique_chars = np.unique(relation_tokens_1d)
         index_character_map_rel = Bidict({idx + num_special_tokens: x for idx, x in enumerate(rel_unique_chars)})
-        sub_tokens_rel = torch.Tensor([index_character_map_rel.inverse[x][0] for x in relation_tokens_1d]).to(device)
-        self.rel_sub_token_lookup, index_character_map_rel, iter_rel = self.run_bpe(iterations_relations, sub_tokens_rel,
-                                                                           index_character_map_rel, end_sub_token,
+        subtokens_rel = torch.Tensor([index_character_map_rel.inverse[x][0] for x in relation_tokens_1d]).to(device)
+        self.rel_subtoken_lookup, index_character_map_rel, iter_rel = self.run_bpe(iterations_relations, subtokens_rel,
+                                                                           index_character_map_rel, end_subtoken,
                                                                            delimiter, num_special_tokens)
 
-        self.rel_sub_token_lookup = {**{key: [key] for key in special_tokens}, **self.rel_sub_token_lookup}
-        self.rel_sub_token_ids = {**special_tokens, **index_character_map_rel.get_dict()}
-        self.num_rel_sub_tokens = len(self.rel_sub_token_ids)
+        self.rel_subtoken_lookup = {**{key: [key] for key in special_tokens}, **self.rel_subtoken_lookup}
+        self.rel_subtoken_ids = {**special_tokens, **index_character_map_rel.get_dict()}
+        self.num_rel_subtokens = len(self.rel_subtoken_ids)
         time_rel_end = time.time()
-        olp_dataset.config.log(f"Ran {iter_ent} iterations of byte-pair encoding for relations.\n"
-              f"Found {self.num_rel_sub_tokens} unique subtokens in {time_rel_end - time_rel_start:.2f}s")
-        #output_str_rel = [[self.rel_sub_token_ids[y] for y in x] for idx, x in self.rel_sub_token_lookup.items()]
+        olp_dataset.config.log(f"Ran {iter_rel} iterations of byte-pair encoding for relations.\n"
+              f"Found {self.num_rel_subtokens} unique subtokens in {time_rel_end - time_rel_start:.2f}s")
+        #output_str_rel = [[self.rel_subtoken_ids[y] for y in x] for idx, x in self.rel_subtoken_lookup.items()]
+        x = 0
 
     def run_bpe(self, iterations,
-                    sub_tokens,
+                    subtokens,
                     index_character_map,
-                    end_sub_token,
+                    end_subtoken,
                     delimiter,
                     num_special_tokens,
                     verbose=False) -> Tuple[dict, dict, int]:
         
         iter = 0
         for x in range(iterations):
-            iter = x
+            iter = x + 1
             # Find most frequent bigram
-            replace_bigram = self.get_bigrams(sub_tokens, index_character_map, delimiter, end_sub_token)
+            replace_bigram = self.get_bigrams(subtokens, index_character_map, delimiter, end_subtoken)
             if replace_bigram == None:
                 break
             # Merge most frequent bigram
-            sub_tokens, index_character_map = self.merge_bigrams(sub_tokens, replace_bigram, index_character_map,
-                                                                 end_sub_token, num_special_tokens)
+            subtokens, index_character_map = self.merge_bigrams(subtokens, replace_bigram, index_character_map,
+                                                                 end_subtoken, num_special_tokens)
             if verbose:
                 print("Iteration {} -> merge bigram: ({} {})".format(x,
                                                                      index_character_map[int(replace_bigram[0].item())],
                                                                      index_character_map[
                                                                          int(replace_bigram[1].item())]))
         # keep only unique sub-tokens occuring in sub-token sequences after BPE
-        unique_sub_tokens = torch.unique(sub_tokens[sub_tokens >= 0])
-        index_character_map = Bidict({int(x.item()): index_character_map[int(x.item())] for x in unique_sub_tokens})
+        unique_subtokens = torch.unique(subtokens[subtokens >= 0])
+        index_character_map = Bidict({int(x.item()): index_character_map[int(x.item())] for x in unique_subtokens})
         # avoid gaps in mapping -> remap indexes to consecutive items
         remap = {key: idx + num_special_tokens for idx, key in enumerate(index_character_map.keys())}
         if set(remap.keys()) != set(remap.values()):
             index_character_map = Bidict({remap[key]: val for key, val in index_character_map.items()})
             # also remap subtokens
-            sub_tokens = torch.Tensor([remap[int(x.item())] if int(x.item()) in remap else int(x.item()) for x in sub_tokens]).to(sub_tokens.device)
-        if end_sub_token in index_character_map.inverse:  # split at end_sub_token idx and delimiter
-            end_sub_token_idx = index_character_map.inverse[end_sub_token][0]
-            end_idxs = torch.where(torch.logical_or(sub_tokens == delimiter, sub_tokens == end_sub_token_idx))[0] + 1
+            subtokens = torch.Tensor([remap[int(x.item())] if int(x.item()) in remap else int(x.item()) for x in subtokens]).to(subtokens.device)
+        if end_subtoken in index_character_map.inverse:  # split at end_subtoken idx and delimiter
+            end_subtoken_idx = index_character_map.inverse[end_subtoken][0]
+            end_idxs = torch.where(torch.logical_or(subtokens == delimiter, subtokens == end_subtoken_idx))[0] + 1
         else:  # split only at delimiter
-            end_idxs = torch.where(sub_tokens == delimiter)[0] + 1
-        split_idxs = np.diff(([0] + end_idxs.tolist() + [len(sub_tokens)]))
-        sub_tokens = torch.split(sub_tokens, split_idxs.tolist())
-        sub_tokens = [x[:-1] if x[-1] == delimiter else x for x in sub_tokens[:-1]]  # filter delimiter after splitting
-        tokens_to_sub_tokens = {idx + num_special_tokens: x.int().tolist() for idx, x in enumerate(sub_tokens)}
-        return tokens_to_sub_tokens, index_character_map, iter
+            end_idxs = torch.where(subtokens == delimiter)[0] + 1
+        split_idxs = np.diff(([0] + end_idxs.tolist() + [len(subtokens)]))
+        subtokens = torch.split(subtokens, split_idxs.tolist())
+        subtokens = [x[:-1] if x[-1] == delimiter else x for x in subtokens[:-1]]  # filter delimiter after splitting
+        tokens_to_subtokens = {idx + num_special_tokens: x.int().tolist() for idx, x in enumerate(subtokens)}
+        return tokens_to_subtokens, index_character_map, iter
 
-    def get_bigrams(self, flat_tokens_num, index_character_map, delimiter, end_sub_token) -> Tensor:
-        end_token_idx = index_character_map.inverse[end_sub_token][0]
+    def get_bigrams(self, flat_tokens_num, index_character_map, delimiter, end_subtoken) -> Tensor:
+        end_token_idx = index_character_map.inverse[end_subtoken][0]
         # Get bigrams and eliminate all end of tokens and delimiters
         bigrams = torch.stack([flat_tokens_num[:-1], flat_tokens_num[1:]], dim=1)
         valid_idxs = bigrams[:, 0] != end_token_idx
@@ -193,9 +193,9 @@ class BytePairEncodingVocab:
                       flat_tokens,
                       replace_bigram,
                       index_character_map,
-                      end_sub_token,
+                      end_subtoken,
                       num_special_tokens) -> Tuple[Tensor, dict]:
-        end_token_idx = index_character_map.inverse[end_sub_token][0]
+        end_token_idx = index_character_map.inverse[end_subtoken][0]
         unique_delimiter = -1
         intersection = (flat_tokens == replace_bigram[0]) & torch.roll(flat_tokens == replace_bigram[1], shifts=-1)
         idxs_replace_tensor = torch.where(intersection)[0]
