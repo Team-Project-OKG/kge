@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import random
@@ -15,7 +16,7 @@ def _read_yaml() -> dict:
     """
     Read config fine_tune_word2vec.yaml.
     """
-    with open("fine_tune_word2vec.yaml") as yaml_file:
+    with open(os.path.join(kge_base_dir(), "kge", "util", "fine_tune_word2vec.yaml")) as yaml_file:
         return yaml.load(yaml_file, Loader=yaml.FullLoader)
 
 
@@ -31,20 +32,20 @@ def _extract_sentences(
     folder = os.path.join(kge_base_dir(), "opiec")
     AVRO_SCHEMA_FILE = os.path.join(folder, schema_filename)
     files_in_folder = sorted(os.listdir(os.path.join(folder, base_dir)))
-    print(f"Found {len(files_in_folder)} files in folder {base_dir}.")
+    logging.info(f"Found {len(files_in_folder)} files in folder {base_dir}.")
     for avro_filename in files_in_folder:
         if avro_filename.endswith(".avro"):
             AVRO_FILE = os.path.join(folder, base_dir, avro_filename)
-            print(f"Start extracting sentences from file {avro_filename}.")
+            logging.info(f"Start extracting sentences from file {avro_filename}.")
             start_timestamp = time.time()
             reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
             for triple in reader:
                 # add to set instead of appending to list so both outputs of sentences_from_opiec can be used
-                sentences.add(tuple(triple["sentence"].split()))
-            print(f"Finished extracting sentences from {avro_filename} (runtime: {(time.time() - start_timestamp):.2f}s"
-                  f"; total sentences extracted: {len(sentences)}).")
+                sentences.add(tuple([word for word in triple["sentence"].split() if word.isalpha()]))
+            logging.info(f"Finished extracting sentences from {avro_filename} (runtime: {(time.time() - start_timestamp):.2f}s"
+                         f"; total sentences extracted: {len(sentences)}).")
             reader.close()
-    print(f"{len(sentences)} sentences extracted.")
+    logging.info(f"{len(sentences)} sentences extracted.")
     return list(sentences)
 
 
@@ -70,33 +71,33 @@ def _fine_tune(
         negative=word2vec_parameters["negative"]
     )
     # shuffle matched sentences to avoid clusters
-    print("Shuffling training data...")
+    logging.info("Shuffling training data...")
     start_time = time.time()
     random.shuffle(matched_sentences)
-    print(f"Finished shuffling training data (required time: {(time.time() - start_time):.2f}s)")
+    logging.info(f"Finished shuffling training data (required time: {(time.time() - start_time):.2f}s)")
     # build corpus from matched sentences
-    print("Building vocab from matched sentences...")
+    logging.info("Building vocab from matched sentences...")
     start_time = time.time()
     model.build_vocab(matched_sentences)
-    print(f"Finished building vocab (required time: {(time.time() - start_time):.2f}s)")
+    logging.info(f"Finished building vocab (required time: {(time.time() - start_time):.2f}s)")
     # load pretrained word2vec embeddings
-    print("Integrating pretrained word2vec embeddings...")
+    logging.info("Integrating pretrained word2vec embeddings...")
     start_time = time.time()
     model.intersect_word2vec_format(
         os.path.join(pretrained_dir, f"{pretrained_filename}.{pretrained_filetype}"),
         binary=(pretrained_filetype == "bin"),
         lockf=1.0  # allow further training of pretrained word2vec vectors
     )
-    print(f"Finished integrating pretrained embeddings (required time: {(time.time() - start_time):.2f}s)")
+    logging.info(f"Finished integrating pretrained embeddings (required time: {(time.time() - start_time):.2f}s)")
     # fine tune with the matched sentences
-    print("Starting fine tuning...")
+    logging.info("Starting fine tuning...")
     start_time = time.time()
     model.train(
         matched_sentences,
         total_examples=model.corpus_count,
         epochs=model.epochs
     )
-    print(f"Finished fine tuning (required time: {(time.time() - start_time):.2f}s)")
+    logging.info(f"Finished fine tuning (required time: {(time.time() - start_time):.2f}s)")
     # save the model
     model.save(os.path.join(pretrained_dir, f"{pretrained_filename}_fine_tuned.model"))
     model.wv.save_word2vec_format(os.path.join(pretrained_dir, f"{pretrained_filename}_fine_tuned.txt"))
@@ -104,9 +105,10 @@ def _fine_tune(
 
 def _fine_tune_word2vec():
     config = _read_yaml()
-    # enable gensim logging
+    # enable logging
+    log_filename = f"{datetime.datetime.now():%Y-%m-%d_%H:%M:%S}_word2vec_fine_tune.log"
     logging.basicConfig(
-        filename=os.path.join(kge_base_dir(), "kge", "util", "fine_tune_log.log"),
+        filename=os.path.join(kge_base_dir(), "opiec", "logs", log_filename),
         filemode="w",
         level=logging.DEBUG
     )
@@ -116,9 +118,9 @@ def _fine_tune_word2vec():
     )
     _fine_tune(
         matched_sentences,
-        config["pretrained"]["filename"],
-        config["pretrained"]["filetype"],
-        config["word2vec_parameters"]
+        config["word2vec"]["pretrained"]["filename"],
+        config["word2vec"]["pretrained"]["filetype"],
+        config["word2vec"]["parameters"]
     )
 
 

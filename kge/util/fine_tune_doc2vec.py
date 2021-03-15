@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import random
@@ -43,11 +44,11 @@ def _extract_entities_and_relations(
     AVRO_SCHEMA_FILE = os.path.join(folder, config["matched_triples"]["schema_filename"])
     base_dir = config["matched_triples"]["dir"]
     files_in_folder = sorted(os.listdir(os.path.join(folder, base_dir)))
-    print(f"Found {len(files_in_folder)} files in folder {base_dir}.")
+    logging.info(f"Found {len(files_in_folder)} files in folder {base_dir}.")
     for avro_filename in files_in_folder:
         if avro_filename.endswith(".avro"):
             AVRO_FILE = os.path.join(folder, base_dir, avro_filename)
-            print(f"Start extracting entities and relations from file {avro_filename}.")
+            logging.info(f"Start extracting entities and relations from file {avro_filename}.")
             start_timestamp = time.time()
             reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
             for triple in reader:
@@ -65,7 +66,7 @@ def _extract_entities_and_relations(
                     entities.add(triple["subject"]["text"])
                     relations.add(triple["relation"]["text"])
                     entities.add(triple["object"]["text"])
-            print(f"Finished extracting entities and relations from {avro_filename} "
+            logging.info(f"Finished extracting entities and relations from {avro_filename} "
                   f"(runtime: {(time.time() - start_timestamp):.2f}s).")
             reader.close()
     for k, v in entities.items():
@@ -73,6 +74,25 @@ def _extract_entities_and_relations(
     for k, v in relations.items():
         relations[k] = list(v)
     return entities, relations
+
+
+def _sample_sentence(
+        num_rep: int,
+        sentence: str,
+        to_replace: dict,
+        replace_list: Union[list, dict],
+        output_writer
+):
+    for i in range(num_rep):
+        sample = sentence
+        for replace_text, ner_tags in zip(to_replace["texts"], to_replace["ner_lists"]):
+            if isinstance(replace_list, list):  # do not replace within ner tag
+                sample = sample.replace(replace_text, random.choice(replace_list))
+            else:  # replace within ner tag
+                sample = sample.replace(replace_text, random.choice(replace_list[random.choice(ner_tags)]))
+        sample = " ".join([word for word in sample.split() if word.isalpha()])  # clean sentence
+        document_text = sample + "_|_0"
+        output_writer.write(document_text + "\n")
 
 
 def _create_negative_samples(
@@ -83,19 +103,20 @@ def _create_negative_samples(
     """
     Read matched sentences and create negative samples as specified in the config. The original sentence and negative
     samples are immediately written to disk to minimize active memory usage. They are written to the specified text
-    file in format (sentence|X) whereas X is 1 for the original sentence and 0 for the negative samples. From this
+    file in format (sentence_|_X) whereas X is 1 for the original sentence and 0 for the negative samples. From this
     structure, Tagged Documents can be constructed by data_stream.py
     """
     folder = os.path.join(kge_base_dir(), "opiec")
     sentence_dir = config["matched_sentences"]["dir"]
     AVRO_SCHEMA_FILE = os.path.join(folder, config["matched_sentences"]["schema_filename"])
     files_in_folder = sorted(os.listdir(os.path.join(folder, sentence_dir)))
-    print(f"Found {len(files_in_folder)} files in folder {sentence_dir}.")
+    logging.info(f"Found {len(files_in_folder)} files in folder {sentence_dir}.")
     num_s = config["negative_sampling"]["num_samples"]["s"]
     num_r = config["negative_sampling"]["num_samples"]["r"]
     num_o = config["negative_sampling"]["num_samples"]["o"]
     sample_within_ner = config["negative_sampling"]["sample_within_ner"]
-    output_writer = open(os.path.join(folder, config["negative_sampling"]["file"]["filename"]), "w")
+    tmp_filepath = os.path.join(folder, f"tmp_{config['negative_sampling']['file']['filename']}")
+    output_writer = open(tmp_filepath, "w")
     for avro_filename in files_in_folder:
         if avro_filename.endswith(".avro"):
             AVRO_FILE = os.path.join(folder, sentence_dir, avro_filename)
@@ -104,49 +125,74 @@ def _create_negative_samples(
             reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
             for triple in reader:
                 counter += 1
-                output_writer.write(f"{triple['sentence']}|1\n")
-                if sample_within_ner:
-                    # negative samples for subjects
-                    for i in range(num_s):
-                        sample = triple['sentence']
-                        for subject, ner_tags in zip(triple["subjects"]["texts"], triple["subjects"]["ner_lists"]):
-                            sample = sample.replace(subject, random.choice(entities[random.choice(ner_tags)]))
-                        output_writer.write(f"{sample}|0\n")
-                    # negative samples for relations
-                    for i in range(num_r):
-                        sample = triple['sentence']
-                        for relation, ner_tags in zip(triple["relations"]["texts"], triple["relations"]["ner_lists"]):
-                            sample = sample.replace(relation, random.choice(relations[random.choice(ner_tags)]))
-                        output_writer.write(f"{sample}|0\n")
-                    # negative samples for objects
-                    for i in range(num_o):
-                        sample = triple['sentence']
-                        for obj, ner_tags in zip(triple["objects"]["texts"], triple["objects"]["ner_lists"]):
-                            sample = sample.replace(obj, random.choice(entities[random.choice(ner_tags)]))
-                        output_writer.write(f"{sample}|0\n")
-                else:
-                    # negative samples for subjects
-                    for i in range(num_s):
-                        sample = triple['sentence']
-                        for subject in triple["subjects"]["texts"]:
-                            sample = sample.replace(subject, random.choice(entities))
-                        output_writer.write(f"{sample}|0\n")
-                    # negative samples for relations
-                    for i in range(num_r):
-                        sample = triple['sentence']
-                        for relation in triple["relations"]["texts"]:
-                            sample = sample.replace(relation, random.choice(relations))
-                        output_writer.write(f"{sample}|0\n")
-                    # negative samples for objects
-                    for i in range(num_o):
-                        sample = triple['sentence']
-                        for obj in triple["objects"]["texts"]:
-                            sample = sample.replace(obj, random.choice(entities))
-                        output_writer.write(f"{sample}|0\n")
+                document_text = " ".join([word for word in triple['sentence'].split() if word.isalpha()]) + "_|_1"
+                output_writer.write(document_text + "\n")
+                _sample_sentence(num_s, triple["sentence"], triple["subjects"], entities, output_writer)
+                _sample_sentence(num_r, triple["sentence"], triple["relations"], relations, output_writer)
+                _sample_sentence(num_o, triple["sentence"], triple["objects"], entities, output_writer)
+                #
+                # if sample_within_ner:
+                #     # negative samples for subjects
+                #     for i in range(num_s):
+                #         sample = triple['sentence']
+                #         for subject, ner_tags in zip(triple["subjects"]["texts"], triple["subjects"]["ner_lists"]):
+                #             sample = sample.replace(subject, random.choice(entities[random.choice(ner_tags)]))
+                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
+                #         document_text = sample + "_|_0"
+                #         output_writer.write(document_text + "\n")
+                #     # negative samples for relations
+                #     for i in range(num_r):
+                #         sample = triple['sentence']
+                #         for relation, ner_tags in zip(triple["relations"]["texts"], triple["relations"]["ner_lists"]):
+                #             sample = sample.replace(relation, random.choice(relations[random.choice(ner_tags)]))
+                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
+                #         document_text = sample + "_|_0"
+                #         output_writer.write(document_text + "\n")
+                #     # negative samples for objects
+                #     for i in range(num_o):
+                #         sample = triple['sentence']
+                #         for obj, ner_tags in zip(triple["objects"]["texts"], triple["objects"]["ner_lists"]):
+                #             sample = sample.replace(obj, random.choice(entities[random.choice(ner_tags)]))
+                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
+                #         document_text = sample + "_|_0"
+                #         output_writer.write(document_text + "\n")
+                # else:
+                #     # negative samples for subjects
+                #     for i in range(num_s):
+                #         sample = triple['sentence']
+                #         for subject in triple["subjects"]["texts"]:
+                #             sample = sample.replace(subject, random.choice(entities))
+                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
+                #         document_text = sample + "_|_0"
+                #         output_writer.write(document_text + "\n")
+                #     # negative samples for relations
+                #     for i in range(num_r):
+                #         sample = triple['sentence']
+                #         for relation in triple["relations"]["texts"]:
+                #             sample = sample.replace(relation, random.choice(relations))
+                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
+                #         document_text = sample + "_|_0"
+                #         output_writer.write(document_text + "\n")
+                #     # negative samples for objects
+                #     for i in range(num_o):
+                #         sample = triple['sentence']
+                #         for obj in triple["objects"]["texts"]:
+                #             sample = sample.replace(obj, random.choice(entities))
+                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
+                #         document_text = sample + "_|_0"
+                #         output_writer.write(document_text + "\n")
             reader.close()
-            print(f"{counter * (num_s + num_r + num_o)} negative samples created from {avro_filename}"
+            logging.info(f"{counter * (num_s + num_r + num_o)} negative samples created from {avro_filename}"
                   f"(runtime: {(time.time() - start_timestamp):.2f}s).")
     output_writer.close()
+    logging.info("Start shuffling samples...")
+    start_timestamp = time.time()
+    output_writer = open(os.path.join(folder, config['negative_sampling']['file']['filename']), "w")
+    for line in WordStream(tmp_filepath, shuffle=True, as_tagged_doc=False):
+        output_writer.write(f"{line}\n")
+    output_writer.close()
+    os.remove(tmp_filepath)
+    logging.info(f"Negative samples shuffled (runtime: {(time.time() - start_timestamp):.2f}s).")
 
 
 def _fine_tune(
@@ -166,23 +212,25 @@ def _fine_tune(
         dm_concat=1,
         sample=1e-5,
         hs=0,
-        vector_size=config["doc2vec_parameters"]["size"],
-        min_count=config["doc2vec_parameters"]["min_count"],
-        window=config["doc2vec_parameters"]["window"],
-        epochs=config["doc2vec_parameters"]["iter"],
-        negative=config["doc2vec_parameters"]["negative"]
+        vector_size=config["doc2vec"]["parameters"]["size"],
+        min_count=config["doc2vec"]["parameters"]["min_count"],
+        window=config["doc2vec"]["parameters"]["window"],
+        epochs=config["doc2vec"]["parameters"]["iter"],
+        negative=config["doc2vec"]["parameters"]["negative"]
     )
     # build corpus from matched sentences
-    print("Building vocab from matched sentences...")
+    logging.info("Building vocab from matched sentences...")
+    corpus = WordStream(corpus_file, shuffle=False, as_tagged_doc=True)
     start_time = time.time()
-    model.build_vocab(WordStream(corpus_file, shuffle=True))
-    print(f"Finished building vocab (required time: {(time.time() - start_time):.2f}s)")
+    model.build_vocab(corpus)
+    logging.info(f"Finished building vocab (required time: {(time.time() - start_time):.2f}s)")
     # manually copy pre-trained embeddings as doc2vec does not support this
-    print("Integrating pretrained word2vec embeddings...")
+    logging.info("Integrating pretrained word2vec embeddings...")
     start_time = time.time()
     pre_trained = KeyedVectors.load_word2vec_format(
         os.path.join(
-            pretrained_dir, f"{config['pretrained']['filename']}.{config['pretrained']['filetype']}"
+            pretrained_dir, f"{config['doc2vec']['pretrained']['filename']}."
+                            f"{config['doc2vec']['pretrained']['filetype']}"
         ),
         binary=False
     )
@@ -192,34 +240,36 @@ def _fine_tune(
         except KeyError:
             continue
     del pre_trained
-    print(f"Finished integrating pretrained embeddings (required time: {(time.time() - start_time):.2f}s)")
+    logging.info(f"Finished integrating pretrained embeddings (required time: {(time.time() - start_time):.2f}s)")
     # fine tune with the matched sentences
-    print("Starting fine tuning...")
+    logging.info("Starting fine tuning...")
     start_time = time.time()
     model.train(
-        WordStream(corpus_file, shuffle=True),
+        corpus,
         total_examples=model.corpus_count,
         epochs=model.epochs
     )
-    print(f"Finished fine tuning (required time: {(time.time() - start_time):.2f}s)")
+    logging.info(f"Finished fine tuning (required time: {(time.time() - start_time):.2f}s)")
     # save the model
-    model.save(os.path.join(pretrained_dir, f"{config['pretrained']['filename']}_doc2vec_fine_tuned.model"))
-    model.wv.save_word2vec_format(os.path.join(pretrained_dir, f"{config['pretrained']['filename']}"
+    model.save(os.path.join(pretrained_dir, f"{config['doc2vec']['pretrained']['filename']}_doc2vec_fine_tuned.model"))
+    model.wv.save_word2vec_format(os.path.join(pretrained_dir, f"{config['doc2vec']['pretrained']['filename']}"
                                                                f"_doc2vec_fine_tuned.txt"))
 
 
 def _fine_tune_doc2vec():
     config = _read_yaml()
-    # enable gensim logging
+    # enable logging
+    log_filename = f"{datetime.datetime.now():%Y-%m-%d_%H:%M:%S}_doc2vec_fine_tune.log"
     logging.basicConfig(
-        filename=os.path.join(kge_base_dir(), "kge", "util", "fine_tune_log.log"),
+        filename=os.path.join(kge_base_dir(), "opiec", "logs", log_filename),
         filemode="w",
         level=logging.DEBUG
     )
     if not config["negative_sampling"]["file"]["load_from_file"]:
         entities, relations = _extract_entities_and_relations(config)
         _create_negative_samples(config, entities, relations)
-    _fine_tune(config)
+    if config["doc2vec"]["fine_tune"]:
+        _fine_tune(config)
 
 
 # configure in fine_tune_doc2vec.yaml

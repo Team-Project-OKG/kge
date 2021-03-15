@@ -11,14 +11,6 @@ import numpy as np
 from gensim.models.doc2vec import TaggedDocument
 
 
-def create_tagged_document(s):
-    """
-    Create TaggedDocument from line
-    """
-    words, tag = s.decode("utf-8").split("|")
-    return TaggedDocument(words.split(), [int(tag)])
-
-
 class WordStream(object):
     """
     Stream words from a corpus of newline-delimited text. Single-threaded
@@ -36,6 +28,7 @@ class WordStream(object):
                  source,
                  offsets=None,
                  shuffle=True,
+                 as_tagged_doc=True,
                  seed=2,
                  log_each=int(5e6)):
         np.random.seed(seed)
@@ -43,6 +36,7 @@ class WordStream(object):
         self.log_each = int(log_each)  # int defining the logging frequency
         self.filesize = int(os.stat(source).st_size)
         self.shuffle = shuffle
+        self.as_tagged_doc = as_tagged_doc
         self.seed = seed
         print("Reading %d bytes of data from source: '%s'" % (self.filesize,
                                                               self.source))
@@ -85,7 +79,7 @@ class WordStream(object):
                     continue
                 if len(line) == 0:
                     continue  # no point to returning an empty list (i.e., whitespace)
-                yield create_tagged_document(line)  # chain parsing logic/functions here
+                yield self.decode_line(line)  # chain parsing logic/functions here
 
     def scan_offsets(self):
         """
@@ -114,3 +108,13 @@ class WordStream(object):
         print("...file has %d bytes and %d lines" % (self.filesize, i))
         print("%.2f seconds elapsed scanning file for offsets" % (toc - tic))
         return offsets
+
+    def decode_line(self, s):
+        """
+        Create TaggedDocument from line
+        """
+        if self.as_tagged_doc:
+            words, tag = s.decode("utf-8").strip().split("_|_")
+            return TaggedDocument(words.split(), [int(tag)])
+        else:
+            return s.decode("utf-8").strip()

@@ -141,8 +141,8 @@ class MentionEmbedder(LookupEmbedder):
             except KeyError:
                 try:
                     self._embeddings.weight.data[i] = torch.from_numpy(
-                        MentionEmbedder._pretrained_model.get_vector(f"ENTITY/{token}"))
-                except KeyError:
+                        MentionEmbedder._pretrained_model.get_vector(token.capitalize()))
+                except (KeyError, AttributeError): # attribute error if token is None
                     oov_counter += 1
                     if oov_random:
                         continue

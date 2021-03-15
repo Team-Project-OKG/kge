@@ -1,4 +1,7 @@
+import datetime
+import logging
 import os
+import re
 import time
 from typing import Tuple
 
@@ -41,12 +44,12 @@ def _read_olpbench_triples(
     """
     Read train, valid and test olpbench quintuples files that are using strings instead of IDs.
     """
-    print("Start reading OLPBench triples.")
+    logging.info("Start reading OLPBench triples.")
     directory = os.path.join(kge_base_dir(), "data", config["dataset"]["dir"])
     train = _olpbench_triples_to_set(directory, config["dataset"]["train_filename"])
     valid_test = _olpbench_triples_to_set(directory, config["dataset"]["valid_filename"])
     valid_test.update(_olpbench_triples_to_set(directory, config["dataset"]["test_filename"]))
-    print("Finished reading OLPBench triples.")
+    logging.info("Finished reading OLPBench triples.")
     return train, valid_test
 
 
@@ -71,11 +74,11 @@ def _find_matches_in_opiec(
     folder = os.path.join(kge_base_dir(), "opiec")
     AVRO_SCHEMA_FILE = os.path.join(folder, config["opiec"]["schema_filename"])
     files_in_folder = sorted(os.listdir(os.path.join(folder, triples_dir)))
-    print(f"Found {len(files_in_folder)} files in folder {triples_dir}.")
+    logging.info(f"Found {len(files_in_folder)} files in folder {triples_dir}.")
     for avro_filename in files_in_folder:
         if avro_filename.endswith(".avro"):
             AVRO_FILE = os.path.join(folder, triples_dir, avro_filename)
-            print(f"Start looking for matches in file {avro_filename}.")
+            logging.info(f"Start looking for matches in file {avro_filename}.")
             start_timestamp = time.time()
             reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
             for triple in reader:
@@ -148,7 +151,7 @@ def _find_matches_in_opiec(
                          if len(token["word"]) > 1 or token["word"].isalpha()]
                     ).lower()
                     train_valid_sentences.add(sentence)
-            print(f"Finished searching for matches in {avro_filename} "
+            logging.info(f"Finished searching for matches in {avro_filename} "
                   f"(runtime: {(time.time() - start_timestamp):.2f}s; total matches: {total_matches}).")
             reader.close()
         while len(matched_sentences) >= config["write_every"]:
@@ -164,7 +167,7 @@ def _find_matches_in_opiec(
     _write_matches_to_avro(
         config["output_matches"]["dir"],
         config["output_matches"]["schema_filename"],
-        f"matched_sentences_{file_number:03d}.avro",
+        f"matched_triples_{file_number:03d}.avro",
         matched_sentences,
     )
     return train_valid_sentences
@@ -190,12 +193,12 @@ def _write_matches_to_avro(
         writer.append(matched_sentence)
     writer.close()
 
-    print(f"{len(matched_sentences)} matched sentences successfully written to avro file {filename}.")
+    logging.info(f"{len(matched_sentences)} matched sentences successfully written to avro file {filename}.")
 
 
 def _check_train_valid_sentences(
         config: dict,
-        train_valid_sentences: set
+        valid_test_sentences: set
 ):
     """
     Check if the sentence of matched triples in training data equals the sentence of matched triples of validation and
@@ -206,7 +209,7 @@ def _check_train_valid_sentences(
     output_dir = config["output_matches"]["dir"]
     AVRO_SCHEMA_FILE = os.path.join(folder, config["output_matches"]["schema_filename"])
     files_in_folder = sorted(os.listdir(os.path.join(folder, output_dir)))
-    print(f"Found {len(files_in_folder)} files in folder {output_dir}.")
+    logging.info(f"Found {len(files_in_folder)} files in folder {output_dir}.")
     total_fine_matches = 0
     total_original_matches = 0
     for avro_filename in files_in_folder:
@@ -218,10 +221,10 @@ def _check_train_valid_sentences(
             original_matches = 0
             for triple in reader:
                 original_matches += 1
-                if not triple["sentence"] in train_valid_sentences:
+                if not triple["sentence"] in valid_test_sentences:
                     fine_matches.append(triple)
             reader.close()
-            print(f"{len(fine_matches)} of {original_matches} matches remain after filtering validation and "
+            logging.info(f"{len(fine_matches)} of {original_matches} matches remain after filtering validation and "
                   f"training sentences (runtime: {(time.time() - start_timestamp):.2f}s).")
             _write_matches_to_avro(
                 config["output_matches"]["dir"],
@@ -231,7 +234,7 @@ def _check_train_valid_sentences(
             )
             total_fine_matches += len(fine_matches)
             total_original_matches += original_matches
-    print(f"In total, {total_fine_matches} of {total_original_matches} matches remain after filtering validation and "
+    logging.info(f"In total, {total_fine_matches} of {total_original_matches} matches remain after filtering validation and "
           f"training sentences")
 
 
@@ -248,66 +251,112 @@ def _restructure_sentences(
     triples_output_dir = config["output_matches"]["dir"]
     AVRO_SCHEMA_FILE = os.path.join(folder, config["output_matches"]["schema_filename"])
     files_in_folder = sorted(os.listdir(os.path.join(folder, triples_output_dir)))
-    print(f"Found {len(files_in_folder)} files in folder {triples_output_dir}.")
+    logging.info(f"Found {len(files_in_folder)} files in folder {triples_output_dir}.")
+    logging.info(f"Start reading sentencens from files...")
+    sentences = set()
     for avro_filename in files_in_folder:
         if avro_filename.endswith(".avro"):
             AVRO_FILE = os.path.join(folder, triples_output_dir, avro_filename)
             start_timestamp = time.time()
             reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
             for triple in reader:
-                sentence = triple["sentence"]
-                if sentence in sentence_dict:
-                    if triple["subject"]["text"] not in sentence_dict[sentence]["subjects"]["texts"]:
-                        sentence_dict[sentence]["subjects"]["texts"].append(triple["subject"]["text"])
-                        sentence_dict[sentence]["subjects"]["ner_lists"].append(triple["subject"]["ner"])
-                    if triple["relation"]["text"] not in sentence_dict[sentence]["relations"]["texts"]:
-                        sentence_dict[sentence]["relations"]["texts"].append(triple["relation"]["text"])
-                        sentence_dict[sentence]["relations"]["ner_lists"].append(triple["relation"]["ner"])
-                    if triple["object"]["text"] not in sentence_dict[sentence]["objects"]["texts"]:
-                        sentence_dict[sentence]["objects"]["texts"].append(triple["object"]["text"])
-                        sentence_dict[sentence]["objects"]["ner_lists"].append(triple["object"]["ner"])
-                else:
-                    sentence_dict[sentence] = {
-                        "sentence": sentence,
-                        "subjects": {
-                            "texts": [triple["subject"]["text"]],
-                            "ner_lists": [triple["subject"]["ner"]]
-                        },
-                        "relations": {
-                            "texts": [triple["relation"]["text"]],
-                            "ner_lists": [triple["relation"]["ner"]]
-                        },
-                        "objects": {
-                            "texts": [triple["object"]["text"]],
-                            "ner_lists": [triple["object"]["ner"]]
-                        }
-                    }
-            print(f"Finished reading file {avro_filename} (runtime: {(time.time() - start_timestamp):.2f}s, "
-                  f"total sentences extracted: {len(sentence_dict)})")
-    # do manually to save RAM instead of creating entire list object that supports indexing
-    values_slice = []
+                sentences.add(triple["sentence"])
+            reader.close()
+            logging.info(f"Finished extracting sentences from file {avro_filename} "
+                  f"(runtime: {(time.time() - start_timestamp):.2f}s, total sentences extracted: {len(sentences)})")
+
+    # create temporary txt file with sentences for everything that is not in the first iteration
+    logging.info("Start writing temporary txt file with sentences...")
+    start_timestamp = time.time()
+    sentences = list(sentences)
+    pack_size = config["output_sentences"]["pack_size"]
+    tmp_filename = os.path.join(folder, "sentences_tmp.txt")
+    with open(tmp_filename, "w") as writer:
+        for sentence in sentences[pack_size:]:
+            writer.write(f"{sentence}\n")
+        writer.close()
+    sentences = sentences[0:config["output_sentences"]["pack_size"]]
+    logging.info(f"Finished creating temporary dump file (runtime: {(time.time() - start_timestamp):.2f}s).")
+
+    # extract triple information for these sentences
+    tmp_file = open(tmp_filename, "r")
     file_number = 0
-    for value in sentence_dict.values():
-        values_slice.append(value)
-        if len(values_slice) % config["write_every"] == 0:
-            _write_matches_to_avro(
-                config["output_sentences"]["dir"],
-                config["output_sentences"]["schema_filename"],
-                f"matched_sentences_{file_number:03d}.avro",
-                values_slice
-            )
+    while True:
+        tmp_sentence = tmp_file.readline().strip()
+        if len(sentences) % pack_size == 0 or not tmp_sentence:
+            # if pack size is reached, check all avro files for triples information and then write it to avro files
+            # before loading additional data
+            sentence_dict = {
+                sentence: {
+                    'sentence': sentence,
+                    'subjects': {
+                        'texts': [],
+                        'ner_lists': []
+                    },
+                    'relations': {
+                        'texts': [],
+                        'ner_lists': []
+                    },
+                    'objects': {
+                        'texts': [],
+                        'ner_lists': []
+                    }
+                }
+                for sentence in sentences
+            }
+            del sentences
+            for avro_filename in files_in_folder:
+                if avro_filename.endswith(".avro"):
+                    AVRO_FILE = os.path.join(folder, triples_output_dir, avro_filename)
+                    start_timestamp = time.time()
+                    reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
+                    for triple in reader:
+                        sentence = triple["sentence"]
+                        if sentence in sentence_dict:
+                            dict_value = sentence_dict[sentence]
+                            if triple["subject"]["text"] not in dict_value["subjects"]["texts"]:
+                                dict_value["subjects"]["texts"].append(triple["subject"]["text"])
+                                dict_value["subjects"]["ner_lists"].append(triple["subject"]["ner"])
+                            if triple["relation"]["text"] not in dict_value["relations"]["texts"]:
+                                dict_value["relations"]["texts"].append(triple["relation"]["text"])
+                                dict_value["relations"]["ner_lists"].append(triple["relation"]["ner"])
+                            if triple["object"]["text"] not in dict_value["objects"]["texts"]:
+                                dict_value["objects"]["texts"].append(triple["object"]["text"])
+                                dict_value["objects"]["ner_lists"].append(triple["object"]["ner"])
+                    logging.info(f"Finished extracting triples information from file {avro_filename} "
+                          f"(runtime: {(time.time() - start_timestamp):.2f}s)")
+                    reader.close()
+            # do manually to save RAM instead of creating entire list object that supports indexing
             values_slice = []
-            file_number += 1
-    _write_matches_to_avro(
-        config["output_sentences"]["dir"],
-        config["output_sentences"]["schema_filename"],
-        f"matched_sentences_{file_number:03d}.avro",
-        values_slice
-    )
+            for i, value in enumerate(sentence_dict.values()):
+                values_slice.append(value)
+                if len(values_slice) % config["write_every"] == 0 or i == len(sentence_dict) - 1:
+                    _write_matches_to_avro(
+                        config["output_sentences"]["dir"],
+                        config["output_sentences"]["schema_filename"],
+                        f"matched_sentences_{file_number:03d}.avro",
+                        values_slice
+                    )
+                    values_slice = []
+                    file_number += 1
+            del sentence_dict
+            sentences = []
+            if not tmp_sentence:
+                break
+        sentences.append(tmp_sentence)
+    tmp_file.close()
+    os.remove(tmp_filename)
 
 
 def _extract_sentences_from_opiec():
     config = _read_yaml()
+    # enable logging
+    log_filename = f"{datetime.datetime.now():%Y-%m-%d_%H:%M:%S}_sentences_from_opiec.log"
+    logging.basicConfig(
+        filename=os.path.join(kge_base_dir(), "opiec", "logs", log_filename),
+        filemode="w",
+        level=logging.DEBUG
+    )
     train, valid_test = _read_olpbench_triples(config)
     train_valid_sentences = _find_matches_in_opiec(config, train, valid_test)
     _check_train_valid_sentences(config, train_valid_sentences)
@@ -321,3 +370,4 @@ def _extract_sentences_from_opiec():
 # configure in sentences_from_opiec.yaml
 if __name__ == '__main__':
     _extract_sentences_from_opiec()
+

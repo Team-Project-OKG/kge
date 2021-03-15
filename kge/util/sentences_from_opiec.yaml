@@ -25,6 +25,8 @@ output_sentences:
   dir: "matched_sentences"
   # file name of the avro schema for the matched sentences in folder opiec
   schema_filename: "MatchedSentences.avsc"
+  # in packs of which size to look for the triple parts of sentences
+  pack_size: 4500000
 
 # in which interval to write output to files
 write_every: 250000
