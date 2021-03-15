@@ -1,6 +1,6 @@
 matched_triples:
   # directory in folder opiec containing the avro files with matched triples
-  dir: "test_matched_triples"
+  dir: "matched_triples"
   # file name of the avro schema for the matched triples in folder opiec
   schema_filename: "MatchedTriples.avsc"
 
