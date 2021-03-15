@@ -15,6 +15,11 @@ train:
     patience: 4
 
 model: complex
+
+complex:
+  entity_embedder.type: lstm_lookup_embedder
+  relation_embedder.type: lstm_lookup_embedder
+
 lstm_lookup_embedder:
   dim: 512
   regularize_weight: 0.8e-7

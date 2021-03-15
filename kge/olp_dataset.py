@@ -16,6 +16,7 @@ from kge import Config, Configurable
 import kge.indexing
 from kge.indexing import create_default_index_functions
 from kge.misc import kge_base_dir
+from kge.util.byte_pair_encoding import BytePairEncodingVocab
 
 from typing import Dict, List, Any, Callable, Union, Optional, Tuple
 
@@ -105,21 +106,52 @@ class OLPDataset(Dataset):
             dataset.relation_ids()
             dataset.entity_token_ids()
             dataset.relation_token_ids()
-            # create mappings of entity ids to a series of token ids
-            dataset.entity_mentions_to_token_ids()
-            dataset.relation_mentions_to_token_ids()
+
+            if config.get("dataset.byte_pair_encoding"):
+                # register hook to execute BPE in parameter search for every new run
+                if config.get("job.type") != 'search':
+                    iter_entities = config.get("dataset.iterations_entities")
+                    iter_relations = config.get("dataset.iterations_relations")
+                    dataset.bpe_vocab = BytePairEncodingVocab(dataset, iter_entities, iter_relations)
+                    # create mappings of entity ids to a series of sub token ids
+                    dataset.entity_mentions_to_subtoken_ids()
+                    dataset.relation_mentions_to_subtoken_ids()
+            else:
+                # create mappings of entity ids to a series of token ids
+                dataset.entity_mentions_to_token_ids()
+                dataset.relation_mentions_to_token_ids()
+
             for split in ["train", "valid", "test"]:
                 dataset.split_olp(split)
-
         return dataset
 
+    def init_bpe_vocab(self, iterations_ent, iterations_rel):
+        """
+        Run at the beginning of each iteration in a hyperparameter search in case Byte-Pair encoding
+        iterations are included in the search space.
+
+        Runs Byte-Pair Encoding, creates sub-token vocab to lookup sub-token sequences from
+        token sequences. Initializes Byte-Pair encoding parameters for dataset
+        """
+        self.bpe_vocab = BytePairEncodingVocab(self, iterations_ent, iterations_rel)
+        self.entity_mentions_to_subtoken_ids(overwrite=True)  # ensure execution
+        self.relation_mentions_to_subtoken_ids(overwrite=True)
+
     def vocab_size_entities(self) -> int:
-        "Return the number of embeddings for entities given the dataset."
-        return self.num_tokens_entities()
+        """Return the number of embeddings for sub-tokens given the dataset.
+        Necessary for byte-pair-encoding"""
+        if hasattr(self, 'bpe_vocab'):
+            return self.bpe_vocab.num_ent_subtokens
+        else:
+            return self.num_tokens_entities()
 
     def vocab_size_relations(self) -> int:
-        "Return the number of embeddings for relations given the dataset."
-        return self.num_tokens_relations()
+        """Return the number of embeddings for sub-tokens given the dataset.
+        Necessary for byte-pair-encoding"""
+        if hasattr(self, 'bpe_vocab'):
+            return self.bpe_vocab.num_rel_subtokens
+        else:
+            return self.num_tokens_relations()
 
     # Return the number of tokens for entities in the OLP dataset
     def num_tokens_entities(self) -> int:
@@ -186,9 +218,105 @@ class OLPDataset(Dataset):
         """
         return self.map_indexes(indexes, "relation_token_ids")
 
+    def get_mention_to_token_id_map(self, key: str):
+        if "entity" in key:
+            if hasattr(self, 'bpe_vocab') and self.config.get("dataset.byte_pair_encoding"):
+                return self.entity_mentions_to_subtoken_ids()
+            else:
+                return self.entity_mentions_to_token_ids()
+        elif "relation" in key:
+            if hasattr(self, 'bpe_vocab') and self.config.get("dataset.byte_pair_encoding"):
+                return self.relation_mentions_to_subtoken_ids()
+            else:
+                return self.relation_mentions_to_token_ids()
+        else:
+            raise NameError(f"Key '{self.configuration_key}' has to contain 'entity' or 'relation'!")
+
+
+    def entity_mentions_to_subtoken_ids(self, overwrite=False):
+        """
+        Create mappings of entity mentions to a series of sub token ids
+        """
+        if "entities" not in self._mentions_to_token_ids or overwrite:
+            key = "entity_id_token_ids"
+            map_, lengths_, actual_max = self.load_subtoken_sequences(key, self._num_entities)
+            self._mentions_to_token_ids["entities"] = torch.from_numpy(map_)
+            self._mention_lengths["entities"] = torch.from_numpy(lengths_)
+            self._max_tokens_per_entity = actual_max
+        return self._mentions_to_token_ids["entities"]
+
+    def relation_mentions_to_subtoken_ids(self, overwrite=False):
+        """
+        Create mappings of relation mentions to a series of sub token ids
+        """
+        if "relations" not in self._mentions_to_token_ids or overwrite:
+            key = "relation_id_token_ids"
+            map_, lengths_, actual_max = self.load_subtoken_sequences(key, self._num_relations)
+            self._mentions_to_token_ids["relations"] = torch.from_numpy(map_)
+            self._mention_lengths["relations"] = torch.from_numpy(lengths_)
+            self._max_tokens_per_relation = actual_max
+        return self._mentions_to_token_ids["relations"]
+
+    def load_subtoken_sequences(self, key: str, num_ids: int, id_delimiter: str = "\t",
+                                token_delimiter: str = " ") -> Tuple[np.array, np.array, int]:
+        """ Load a sequence of sub-token ids associated with different mentions for a given key
+            Byte-Pair encoding should be executed beforehand to ensure valid lookup of token to
+            sub token sequences
+
+        If duplicates are found, raise a key error as duplicates cannot be handled with the
+        tensor structure of mention ids to token id sequences
+        """
+        self.ensure_available(key)
+        filename = self.config.get(f"dataset.files.{key}.filename")
+        entity_or_relation = "entity" if "entity" in key else "relation"
+        filter_start_and_end_token = self.config.get(f"dataset.{entity_or_relation}_filter_start_and_end_token")
+        if entity_or_relation == "entity":
+            self.config.log(f"Converting tokens to subtokens for entities...")
+            lookup_subtokens = self.bpe_vocab.ent_subtoken_lookup
+        elif entity_or_relation == "relation":
+            self.config.log(f"Converting tokens to subtokens for relations...")
+            lookup_subtokens = self.bpe_vocab.rel_subtoken_lookup
+        else:
+            raise KeyError("The key has to contain 'entity' or 'relation'.")
+        map_ = None
+        lengths_ = None
+        actual_max = None
+
+        if map_ is None:
+            with open(os.path.join(self.folder, filename), "r") as file:
+                dictionary = {}
+                actual_max = 0
+                max_id = 0
+                used_keys = set()
+                for line in file:
+                    k, value = line.split(id_delimiter, maxsplit=1)
+                    value = value.rstrip("\n")
+                    try:
+                        k = int(k)
+                    except ValueError:
+                        raise TypeError(f"{filename} contains non-integer keys")
+                    if used_keys.__contains__(k):
+                        raise KeyError(f"{filename} contains duplicated keys")
+                    used_keys.add(k)
+                    split_ = [int(i) for i in value.split(token_delimiter)]
+                    if filter_start_and_end_token:
+                        split_ = split_[1:len(split_) - 1]
+                    # replace tokens by subtokens
+                    split_ = np.concatenate([lookup_subtokens[x] for x in split_]).tolist()
+                    actual_max = max(actual_max, len(split_))
+                    dictionary[k] = split_
+                    max_id = max(max_id, k)
+            map_ = np.zeros([max_id + 1, actual_max], dtype=int)
+            lengths_ = np.zeros([max_id + 1], dtype=int)
+            for k, split_ in dictionary.items():
+                map_[k][0:len(split_)] = split_
+                lengths_[k] = len(split_)
+        return map_, lengths_, actual_max
+
+
     # create mappings of entity mentions to a series of token ids
     def entity_mentions_to_token_ids(self):
-        if "entities" not in self._alternative_object_mentions:
+        if "entities" not in self._mentions_to_token_ids:
             map_, lengths_, actual_max = self.load_token_sequences("entity_id_token_ids", self._num_entities,
                                                          self._max_tokens_per_entity)
             self._mentions_to_token_ids["entities"] = torch.from_numpy(map_)
@@ -198,7 +326,7 @@ class OLPDataset(Dataset):
 
     # create mappings of relation mentions to a series of token ids_nr_alternative_subjects
     def relation_mentions_to_token_ids(self):
-        if "relations" not in self._alternative_object_mentions:
+        if "relations" not in self._mentions_to_token_ids:
             map_, lengths_, actual_max = self.load_token_sequences("relation_id_token_ids", self._num_relations,
                                                          self._max_tokens_per_relation)
             self._mentions_to_token_ids["relations"] = torch.from_numpy(map_)
@@ -229,6 +357,12 @@ class OLPDataset(Dataset):
 
         use_pickle = self.config.get("dataset.pickle")
 
+        if filetype != "sequence_map":
+            raise TypeError(
+                "Unexpected file type: "
+                f"dataset.files.{key}.type='{filetype}', expected 'sequence_map'"
+            )
+
         if use_pickle:
             # check if there is a pickled, up-to-date version of the file
             pickle_suffix = f"{key}-{filter_start_and_end_token}.pckl"
@@ -236,16 +370,12 @@ class OLPDataset(Dataset):
             pickle_result = Dataset._pickle_load_if_uptodate(None, pickle_filename, filename)
             if pickle_result is not None:
                 map_, lengths_, actual_max = pickle_result
-            else:
-                map_ = None
-                lengths_ = None
-                actual_max = None
 
-        if filetype != "sequence_map":
-            raise TypeError(
-                "Unexpected file type: "
-                f"dataset.files.{key}.type='{filetype}', expected 'sequence_map'"
-            )
+        if not use_pickle or pickle_result is None:
+            map_ = None
+            lengths_ = None
+            actual_max = None
+
         if map_ is None:
             with open(os.path.join(self.folder, filename), "r") as file:
                 dictionary = {}
