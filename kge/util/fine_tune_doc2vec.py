@@ -83,6 +83,9 @@ def _sample_sentence(
         replace_list: Union[list, dict],
         output_writer
 ):
+    """
+    Create negative samples from a given sentence.
+    """
     for i in range(num_rep):
         sample = sentence
         for replace_text, ner_tags in zip(to_replace["texts"], to_replace["ner_lists"]):
@@ -130,57 +133,6 @@ def _create_negative_samples(
                 _sample_sentence(num_s, triple["sentence"], triple["subjects"], entities, output_writer)
                 _sample_sentence(num_r, triple["sentence"], triple["relations"], relations, output_writer)
                 _sample_sentence(num_o, triple["sentence"], triple["objects"], entities, output_writer)
-                #
-                # if sample_within_ner:
-                #     # negative samples for subjects
-                #     for i in range(num_s):
-                #         sample = triple['sentence']
-                #         for subject, ner_tags in zip(triple["subjects"]["texts"], triple["subjects"]["ner_lists"]):
-                #             sample = sample.replace(subject, random.choice(entities[random.choice(ner_tags)]))
-                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
-                #         document_text = sample + "_|_0"
-                #         output_writer.write(document_text + "\n")
-                #     # negative samples for relations
-                #     for i in range(num_r):
-                #         sample = triple['sentence']
-                #         for relation, ner_tags in zip(triple["relations"]["texts"], triple["relations"]["ner_lists"]):
-                #             sample = sample.replace(relation, random.choice(relations[random.choice(ner_tags)]))
-                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
-                #         document_text = sample + "_|_0"
-                #         output_writer.write(document_text + "\n")
-                #     # negative samples for objects
-                #     for i in range(num_o):
-                #         sample = triple['sentence']
-                #         for obj, ner_tags in zip(triple["objects"]["texts"], triple["objects"]["ner_lists"]):
-                #             sample = sample.replace(obj, random.choice(entities[random.choice(ner_tags)]))
-                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
-                #         document_text = sample + "_|_0"
-                #         output_writer.write(document_text + "\n")
-                # else:
-                #     # negative samples for subjects
-                #     for i in range(num_s):
-                #         sample = triple['sentence']
-                #         for subject in triple["subjects"]["texts"]:
-                #             sample = sample.replace(subject, random.choice(entities))
-                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
-                #         document_text = sample + "_|_0"
-                #         output_writer.write(document_text + "\n")
-                #     # negative samples for relations
-                #     for i in range(num_r):
-                #         sample = triple['sentence']
-                #         for relation in triple["relations"]["texts"]:
-                #             sample = sample.replace(relation, random.choice(relations))
-                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
-                #         document_text = sample + "_|_0"
-                #         output_writer.write(document_text + "\n")
-                #     # negative samples for objects
-                #     for i in range(num_o):
-                #         sample = triple['sentence']
-                #         for obj in triple["objects"]["texts"]:
-                #             sample = sample.replace(obj, random.choice(entities))
-                #         sample = " ".join([word for word in sample.split() if word.isalpha()])
-                #         document_text = sample + "_|_0"
-                #         output_writer.write(document_text + "\n")
             reader.close()
             logging.info(f"{counter * (num_s + num_r + num_o)} negative samples created from {avro_filename}"
                   f"(runtime: {(time.time() - start_timestamp):.2f}s).")
