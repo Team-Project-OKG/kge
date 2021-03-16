@@ -12,8 +12,8 @@ transformer_lookup_embedder:
   cut_padding_in_batch: True
   set_padding_embeddings_to_0: True
 
-  bin_within_batch: True
-  bin_size: 50
+  bin_within_batch: False
+  bin_size: 250
 
   pretrained:
     use: False
@@ -25,9 +25,11 @@ transformer_lookup_embedder:
     use_pickle: True
 
   # settings for lookup embedders (see lookup_embedder.yaml for explanations)
-  dim: 128
+  dim: 512
   nhead: 8
   num_layers: 3
+  pooling: mean
+  dim_ff: 1024
   initialize: normal_
   initialize_args:
     +++: +++

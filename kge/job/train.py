@@ -313,6 +313,8 @@ class TrainingJob(TrainingOrEvaluationJob):
             batches=len(self.loader),
             size=self.num_examples,
         )
+        if self.epoch == 50:
+            debug = 0
         if not self.is_forward_only:
             self.current_trace["epoch"].update(
                 lr=[group["lr"] for group in self.optimizer.param_groups],
@@ -343,6 +345,8 @@ class TrainingJob(TrainingOrEvaluationJob):
                 "batch": batch_index,
                 "batches": len(self.loader),
             }
+            if batch_index == 8000 or batch_index == 18000 or batch_index == 28000 or batch_index == 38000:
+                debug = 0
             if not self.is_forward_only:
                 self.current_trace["batch"].update(
                     lr=[group["lr"] for group in self.optimizer.param_groups],

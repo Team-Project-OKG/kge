@@ -10,29 +10,32 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: transformer_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: transformer_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: transformer_lookup_embedder                          #!!! adjust if model is changed
+  relation_embedder.type: transformer_lookup_embedder                        #!!! adjust if model is changed
 
 # Best results from 20210123-212939-olpbench_transformer_random_search/00006
 transformer_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
   initialize: xavier_uniform_ # is Glorot initialization
   dim: 512
-  dropout: 0.06814730241894722
+  dropout: 0.0 #0.06814730241894722
 
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
-  max_epochs: 5
+  max_epochs: 15
   batch_size: 10
   subbatch_auto_tune: True
+
+
   optimizer:
     +++: +++
     default:
       args:
         +++: +++
-        lr: 0.08042458770796657
+        eps: 1e-9
+        lr: 0.0008042458770796657
         weight_decay: 3.4979861306445674e-07
-      type: Adagrad
+      type: Adam
 
 # settings for negative sampling
 # use number of replacements equal to the batch size to approximate Samuel's negative sampling algorithm
@@ -42,13 +45,14 @@ negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
-  samples_within_batch: False
+  samples_within_batch: True
   num_samples:
-    s: 20
+    s: 1
     p: 0          # -1 means: same as s
     o: -1
 
 valid:
+  every: 5
   early_stopping:
     patience: 10
 
