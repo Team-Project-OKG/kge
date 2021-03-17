@@ -64,7 +64,7 @@ class MentionEmbedder(LookupEmbedder):
     def lookup_tokens(self, indexes: Tensor) -> Tensor:
         token_seq = self._token_lookup[indexes]
         if self._cut_padding:
-            return token_seq[:, 0:torch.max(torch.nonzero(token_seq), dim=0).values[1]+1]
+            return token_seq[:, 0:torch.max((token_seq > 0).sum(dim=1)).item()]
         else:
             return token_seq
 
