@@ -137,6 +137,13 @@ def _run_train_job(sicnk, device=None):
             )
         )
         checkpoint_file = get_checkpoint_file(train_job_config)
+
+        # Todo: replace by hook
+        if train_job_config.get("dataset.byte_pair_encoding") and train_job_config.get("dataset.type") == 'olp':
+            iterations_ent = train_job_config.get("dataset.iterations_entities")
+            iterations_rel = train_job_config.get("dataset.iterations_relations")
+            search_job.dataset.init_bpe_vocab(iterations_ent, iterations_rel)
+
         if checkpoint_file is not None:
             checkpoint = load_checkpoint(
                 checkpoint_file, train_job_config.get("job.device")

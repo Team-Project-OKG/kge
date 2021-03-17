@@ -1,0 +1,18 @@
+{"namespace":"avroschema.matched", 
+     "name": "MatchedSentences",
+     "type": "record", 
+     "fields": [
+        {"name": "subject", "type": {
+            "name": "TriplePart",
+            "type": "record",
+                "fields":[
+					{"name": "text", "type": "string"},
+					{"name": "ner", "type" : ["null", 
+                        {"type" : "array", "items": "string"}
+					]}]
+		}},
+        {"name": "relation", "type": "TriplePart"},
+        {"name": "object", "type": "TriplePart"},
+        {"name": "sentence", "type" : "string"}		
+    ]
+}

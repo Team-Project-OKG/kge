@@ -41,13 +41,10 @@ class MentionEmbedder(LookupEmbedder):
         self._bin_size = self.get_option("bin_size")
 
         if "relation" in self.configuration_key:
-            self._token_lookup = self.dataset._mentions_to_token_ids["relations"].to(self.config.get("job.device"))
-            # Todo:
-            #self._token_lookup = self.dataset.get_mention_to_token_id_map("relation") # -> return token or sub-token sequence
-            # _mentions_to_token_ids["relations"].to(self.config.get("job.device"))
+            # return token or sub-token sequence
+            self._token_lookup = self.dataset.get_mention_to_token_id_map("relation").to(self.config.get("job.device"))
         elif "entity" in self.configuration_key:
-            #self._token_lookup = self.dataset.get_mention_to_token_id_map("relation")  # -> return token or sub-token sequence
-            self._token_lookup = self.dataset._mentions_to_token_ids["entities"].to(self.config.get("job.device"))
+            self._token_lookup = self.dataset.get_mention_to_token_id_map("entity").to(self.config.get("job.device"))
         else:
             raise NameError(f"Key '{self.configuration_key}' has to contain 'entity or 'relation'!")
         self._cut_padding = self.get_option("cut_padding_in_batch")
@@ -128,6 +125,7 @@ class MentionEmbedder(LookupEmbedder):
                     self._embeddings = pickle.load(f)
                 self._embeddings.weight.requires_grad = not self.get_option("pretrained.freeze")
                 self.dim = self._embeddings.embedding_dim
+                self.config.log(f"Loaded pretrained embeddings from {pickle_filename}")
                 return
         # create embeddings tensor from scratch
         if MentionEmbedder._pretrained_model is None or MentionEmbedder._pretrained_model_file != filename:
@@ -148,12 +146,12 @@ class MentionEmbedder(LookupEmbedder):
             self.config.log(f"Readjusted embedding size to {self.dim} according to pretrained embeddings {filename}")
         for (i, token) in zip(range(len(token_list)), token_list):
             try:
-                self._embeddings.weight.data[i] = torch.from_numpy(MentionEmbedder._pretrained_model.get_vector(token))
+                self._embeddings.weight.data[i] = torch.from_numpy(MentionEmbedder._pretrained_model.get_vector(token).copy())
             except KeyError:
                 try:
                     self._embeddings.weight.data[i] = torch.from_numpy(
-                        MentionEmbedder._pretrained_model.get_vector(f"ENTITY/{token}"))
-                except KeyError:
+                        MentionEmbedder._pretrained_model.get_vector(token.capitalize()).copy())
+                except (KeyError, AttributeError):  # attribute error if token is None
                     oov_counter += 1
                     if oov_random:
                         continue

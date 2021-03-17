@@ -1,0 +1,52 @@
+matched_triples:
+  # directory in folder opiec containing the avro files with matched triples
+  dir: "matched_triples"
+  # file name of the avro schema for the matched triples in folder opiec
+  schema_filename: "MatchedTriples.avsc"
+
+matched_sentences:
+  # directory in folder opiec containing the avro files with matched sentences
+  dir: "matched_sentences"
+  # file name of the avro schema for the matched sentences in folder opiec
+  schema_filename: "MatchedSentences.avsc"
+
+negative_sampling:
+  # information about the file to which negatively sampled and positive sentences are written
+  file:
+    # file name of txt file to write to in folder opiec
+    filename: "negative_sampled_sentences.txt"
+    # flag whether to not create negative samples from scratch, but load them from the given file instead
+    load_from_file: False
+  # number of replacements for subject, relation and object (does not support -1)
+  num_samples:
+    s: 2
+    r: 0
+    o: 2
+  # draw samples from other entities / relations with the same NER tag
+  sample_within_ner: True
+  # list of ner tags in data
+  ner_tags: ["PERSON", "LOCATION", "ORGANIZATION", "MONEY", "PERCENT", "DATE", "NUMBER", "DURATION",
+             "TIME", "SET", "ORDINAL", "QUANTITY", "MISC", "O"]
+
+doc2vec:
+  # flag whether to fine tune doc2vec model, set False to only create negative samples
+  fine_tune: True
+  # information about pre-trained word2vec embeddings to use
+  pretrained:
+    # file name of pretrained word2vec data in folder pretrained
+    # filename: "glove.840B.300d_word2vec"
+    filename: "enwiki_20180420_500d"
+    # file extension of pretrained word2vec data
+    filetype: "txt"
+  # parameters of doc2vec model
+  parameters:
+    # dimension of embeddings
+    size: 500
+    # min number of occurences in the sentences for the word to be considered in training (recommended: 1)
+    min_count: 1
+    # window size of model
+    window: 5
+    # number of training epochs
+    iter: 5
+    # number of negative words whose parameters are adjusted additionally to the correct word
+    negative: 15
