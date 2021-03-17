@@ -41,7 +41,7 @@ dataset:
   # training, very low preparation runtime.
   # Max iterations: If no more bigrams can be found -> token-level sub-tokens
   # lower memory during training, high preparation runtime
-  byte_pair_encoding: True
+  byte_pair_encoding: False
   iterations_entities: 100
   iterations_relations: 100
 
