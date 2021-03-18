@@ -120,6 +120,10 @@ dataset:
   # (in dataset.yaml).
   pickle: True
 
+
+  # TODO: ADD COMMENT FOR BYTE PAIR ENCODING
+  byte_pair_encoding: False
+
   # Additional dataset specific keys can be added as needed
   +++: +++
 

@@ -24,7 +24,7 @@ class BigramLookupEmbedder(MentionEmbedder):
 
     def _token_embed(self, token_indexes: Tensor):
         # token_indexes = self.lookup_tokens(indexes)
-        token_mask = (token_indexes > 0).unsqueeze(1).float()[:, :, 1:]
+        token_mask = (~(token_indexes == 0)).unsqueeze(1).float()[:, :, 1:]
         token_embeddings = self.embed_tokens(token_indexes).transpose(1, 2)
         encoded = self.encoder(token_embeddings)
         encoded = encoded + token_embeddings[:, :, 1:]

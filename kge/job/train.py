@@ -592,7 +592,9 @@ class TrainingJob(TrainingOrEvaluationJob):
             subbatch_end = min(subbatch_start + max_subbatch_size, batch_size)
             subbatch_slice = slice(subbatch_start, subbatch_end)
             if self.config.get("negative_sampling.samples_within_batch"):
+                result.prepare_time -= time.time()
                 pre_scores = OlpNegativeSample.pre_score_(self.model, batch["triples"])
+                result.prepare_time += time.time()
                 self._process_subbatch_batch_sampling(batch_index, batch, subbatch_slice, result, pre_scores)
             else:
                 self._process_subbatch(batch_index, batch, subbatch_slice, result)
@@ -1124,12 +1126,13 @@ class TrainingJobNegativeSampling(TrainingJob):
         batch_negative_samples = batch["negative_samples"]
         batch_size = len(batch["triples"])
         subbatch_size = len(triples)
-        result.prepare_time += time.time()
         labels = batch["labels"]  # reuse b/w subbatches
         pre_scores = pre_scores
 
         #pre_scores = OlpNegativeSample.pre_score_(self.model, triples)  # pre_scores = [_po, spo, sp_]
         loss_value = {}
+
+        result.prepare_time += time.time()
 
         # process the subbatch for each slot separately
         for slot in [S, P, O]:

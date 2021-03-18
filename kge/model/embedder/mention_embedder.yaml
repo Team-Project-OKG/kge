@@ -22,6 +22,18 @@ any_mention_embedder:
   # performance due to decreased parallelization.
   bin_size: 0
 
+  # Token embedding models are used to get embeddings instead of using torch.nn.Embeddings. This freezes embeddings,
+  # i.e. they are not adjusted during training.
+  token_embedding_model:
+    # Enables or disables token embedding models
+    use: False
+    # Uses models from https://huggingface.co/models . Implemented to be able to use bert, distilbert and albert models.
+    # Needs corresponding tokens that can be created by using the same model in utils.create_bert_tokens
+    name: distilbert
+    # Sets the number of entities that should be cached. Caches most frequent entities, decreases runtime significantly.
+    # Good number for OLPBench is 15000, which cover roughly half of the occurences in training.
+    precache: 0
+
 
   # Parameters related to using pre-trained word embeddings.
   pretrained:

@@ -17,6 +17,11 @@ bigram_lookup_embedder:
   bin_within_batch: False
   bin_size: 0
 
+  token_embedding_model:
+    use: False
+    name: distilbert
+    precache: 0
+
   pretrained:
     use: False
     file:

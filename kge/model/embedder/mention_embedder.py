@@ -1,8 +1,10 @@
 import os
 import pickle
+import math
 
 from torch import Tensor
 import torch
+import transformers
 import numpy as np
 
 from gensim.models import KeyedVectors
@@ -25,6 +27,9 @@ class MentionEmbedder(LookupEmbedder):
     # save pretrained embedding model in class attribute to only load it once
     _pretrained_model = None
     _pretrained_model_file = None
+
+    _n_precached_embeddings = None
+    _precached_embeddings = None
 
     def __init__(
             self,
@@ -56,6 +61,15 @@ class MentionEmbedder(LookupEmbedder):
         self._reset_padding = self.get_option("set_padding_embeddings_to_0")
         self.reset_padding_index()
 
+        if self.get_option("token_embedding_model.use"):
+            del self._embeddings
+            self._init_token_embedding_model()
+
+        if self.get_option("token_embedding_model.precache"):
+            self._n_precached_embeddings = self.get_option("token_embedding_model.precache")
+            self._init_precache()
+
+
     # set embeddings weights at padding, mention start and mention end index to 0
     def reset_padding_index(self):
         if self._reset_padding:
@@ -69,12 +83,33 @@ class MentionEmbedder(LookupEmbedder):
             return token_seq
 
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
-        return self._embeddings(token_indexes.long())
+        if self.get_option("token_embedding_model.use"):
+            if self._precached_embeddings is not None:
+                original_token_indexes = token_indexes.clone()
+                original_shape = token_indexes.shape
+                replacement_index = token_indexes[:,0] < 0
+                precached_indexes = token_indexes[replacement_index][:,0]* -1 - 1
+                token_indexes = token_indexes[replacement_index == False]
+                new_embeddings = torch.empty([original_shape[0], original_shape[1], self.dim], device=token_indexes.device)
+
+            with torch.no_grad():
+                embeddings = self._pretrained_model(token_indexes, (~ (token_indexes == 0)))[0] * ((~ (token_indexes == 0))[..., None])
+
+                if self._precached_embeddings is not None:
+                    new_embeddings[replacement_index == False] = embeddings
+                    lookup = self._precached_embeddings[precached_indexes][:, :original_shape[1]]
+                    new_embeddings[replacement_index] = lookup
+
+                    embeddings = new_embeddings
+
+                return embeddings
+        else:
+            return self._embeddings(token_indexes.long())
 
     def embed(self, indexes: Tensor) -> Tensor:
         if self._bin_batch:
             token_indexes = self.lookup_tokens(indexes)
-            seq_lengths = (token_indexes > 0).sum(dim=1).cpu().data.numpy()
+            seq_lengths = (~(token_indexes == 0)).sum(dim=1).cpu().data.numpy()
             order = np.argsort(seq_lengths)
             rev_order = np.argsort(order)
             lengths, counts = np.unique(seq_lengths, return_counts=True)
@@ -162,4 +197,22 @@ class MentionEmbedder(LookupEmbedder):
         if use_pickle:
             Dataset._pickle_dump_atomic(self._embeddings, pickle_filename)
 
+    def _init_token_embedding_model(self):
+        if MentionEmbedder._pretrained_model is None:
+            MentionEmbedder._pretrained_model = transformers.AutoModel.from_pretrained(
+                self.get_option("token_embedding_model.name")).to(self.config.get("job.device"))
 
+    def _init_precache(self):
+        batch_size = self.config.get("train.batch_size")
+        embeddings_list = []
+        for batch_number in range(math.ceil(self._n_precached_embeddings / batch_size)):
+            token_indexes = self._token_lookup[batch_number * batch_size:min((batch_number + 1) * batch_size, self._n_precached_embeddings)]
+            embeddings = self.embed_tokens(token_indexes)
+            embeddings_list.append(embeddings)
+
+        self._token_lookup[0:self._n_precached_embeddings, 0] = torch.arange(start=-1, end=-self._n_precached_embeddings-1, step=-1)
+
+        self._precached_embeddings = torch.cat(embeddings_list).to(self.config.get("job.device"))
+        del embeddings_list
+        del embeddings
+        del token_indexes

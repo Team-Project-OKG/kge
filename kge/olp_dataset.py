@@ -365,13 +365,16 @@ class OLPDataset(Dataset):
 
         if use_pickle:
             # check if there is a pickled, up-to-date version of the file
-            pickle_suffix = f"{key}-{filter_start_and_end_token}.pckl"
+            pickle_suffix = f"{filename}-{key}-{filter_start_and_end_token}.pckl"
             pickle_filename = os.path.join(self.folder, pickle_suffix)
             pickle_result = Dataset._pickle_load_if_uptodate(None, pickle_filename, filename)
             if pickle_result is not None:
                 map_, lengths_, actual_max = pickle_result
-
-        if not use_pickle or pickle_result is None:
+            else:
+                map_ = None
+                lengths_ = None
+                actual_max = None
+        else:
             map_ = None
             lengths_ = None
             actual_max = None
