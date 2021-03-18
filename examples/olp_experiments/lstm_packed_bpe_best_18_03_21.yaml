@@ -1,32 +1,12 @@
 import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
 
-# general settings for the hyperparameter optimization job
-job.type: search
-search.type: manual
-valid.metric: mean_reciprocal_rank_filtered
-manual_search.configurations:
-  #- { folder: 'ent_200_rel_50', dataset.iterations_entities: 200, dataset.iterations_relations: 50 }
-  #- { folder: 'ent_300_rel_100', dataset.iterations_entities: 300, dataset.iterations_relations: 100 }
-  #- { folder: 'ent_400_rel_200', dataset.iterations_entities: 400, dataset.iterations_relations: 200 }
-  #- { folder: 'ent_400_rel_600', dataset.iterations_entities: 400, dataset.iterations_relations: 600 }
-  #- { folder: 'ent_500_rel_1000', dataset.iterations_entities: 500, dataset.iterations_relations: 1000 }
-  - { folder: 'ent_1000_rel_1150', dataset.iterations_entities: 1000, dataset.iterations_relations: 1150 }
-  - { folder: 'ent_2000_rel_1500', dataset.iterations_entities: 2000, dataset.iterations_relations: 1500 }
-  - { folder: 'ent_5000_rel_2000', dataset.iterations_entities: 5000, dataset.iterations_relations: 2000 }
-  - { folder: 'ent_12000_rel_3000', dataset.iterations_entities: 12000, dataset.iterations_relations: 3000 }
-  - { folder: 'ent_17000_rel_5000', dataset.iterations_entities: 17000, dataset.iterations_relations: 5000 }
-  - { folder: 'ent_55000_rel_8000', dataset.iterations_entities: 55000, dataset.iterations_relations: 8000 }
-  - { folder: 'ent_78000_rel_17000', dataset.iterations_entities: 78000, dataset.iterations_relations: 17000 }
-  - { folder: 'ent_160000_rel_31000', dataset.iterations_entities: 160000, dataset.iterations_relations: 31000 }
-  - { folder: 'ent_209000_rel_43000', dataset.iterations_entities: 209000, dataset.iterations_relations: 43000 }
-  - { folder: 'ent_230000_rel_50000', dataset.iterations_entities: 230000, dataset.iterations_relations: 50000 }
-
-
 # settings for the dataset to use
 dataset:
   type: olp
   name: olpbench
   byte_pair_encoding: True
+  iterations_entities: 230000
+  iterations_relations: 50000
 
 # settings for ComplEx and the respective embedders
 model: complex
@@ -45,7 +25,7 @@ packed_lstm_lookup_embedder:                                                  #!
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
-  max_epochs: 10
+  max_epochs: 100
   batch_size: 4096
   subbatch_auto_tune: True
   optimizer:

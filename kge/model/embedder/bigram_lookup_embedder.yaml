@@ -5,7 +5,7 @@ bigram_lookup_embedder:
 
   # parameters specific to Bigram Lookup Embedder
 
-  # which pooling algorithm to use ("max", "sum", "mean")
+  # which pooling algorithm to use ("max", "sum")
   pooling: "max"
 
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
