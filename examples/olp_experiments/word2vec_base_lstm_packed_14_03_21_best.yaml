@@ -1,38 +1,49 @@
-import: [transformer_lookup_embedder]                                         #!!! adjust if model is changed
-
+import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
 
 # settings for the dataset to use
 dataset:
   type: olp
   name: olpbench
+  byte_pair_encoding: False
 
 # settings for ComplEx and the respective embedders
 model: complex
 
 complex:
-  entity_embedder.type: transformer_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: transformer_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: packed_lstm_lookup_embedder                           #!!! adjust if model is changed
+  relation_embedder.type: packed_lstm_lookup_embedder                         #!!! adjust if model is changed
 
-# Best results from 20210123-212939-olpbench_transformer_random_search/00006
-transformer_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+packed_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
   initialize: xavier_uniform_ # is Glorot initialization
-  dim: 256
-  dropout: 0.2
+  dropout: 0.07800686648115517
+  pretrained:
+    use: True
+    file:
+      name: enwiki_20180420_300d  #glove.840B.300d_word2vec
+      type: txt
+    oov_tactic: 'random'
+    freeze: False
+    use_pickle: True
 
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
-  max_epochs: 1
-  batch_size: 1024
+  max_epochs: 100
+  batch_size: 4096
   subbatch_auto_tune: True
   optimizer:
     +++: +++
     default:
       args:
         +++: +++
-        lr: 0.0008042458770796657
-        weight_decay: 3.4979861306445674e-07
+        lr: 0.16071061396040023
+        weight_decay: 5.501112763443961e-07
       type: Adagrad
+#  lr_scheduler: ReduceLROnPlateau
+#  lr_scheduler_args:
+#    mode: max
+#    patience: 4'
+
 
 # settings for negative sampling
 # use number of replacements equal to the batch size to approximate Samuel's negative sampling algorithm
@@ -40,19 +51,14 @@ train:
 #!!! look into how to reproduce Samuel's negative sampling algorithm
 negative_sampling:
   shared: True
-  #shared_type: naive
   with_replacement: False
   implementation: batch
   samples_within_batch: True
   #num_samples:
-    #s: 512
-    #p: 0          # -1 means: same as s
-    #o: -1
+  #  s: 8192
+  #  p: 0          # -1 means: same as s
+  #  o: -1
 
-valid:
-  every: 1
-  early_stopping:
-    patience: 10
 
 # settings for the evaluation job
 eval:
