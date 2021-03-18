@@ -45,7 +45,7 @@ class TransformerLookupEmbedder(MentionEmbedder):
             # add cls token at the beginning and adjust src_key_padding_mask
             token_embeddings = torch.cat([self.cls_emb.repeat(1, token_embeddings.shape[1], 1), token_embeddings], dim=0)
             src_key_padding_mask = torch.cat([
-                torch.zeros([src_key_padding_mask.shape[0], 1], dtype=torch.bool), src_key_padding_mask], dim=1)
+                torch.zeros([src_key_padding_mask.shape[0], 1], dtype=torch.bool, device=token_embeddings.device), src_key_padding_mask], dim=1)
         transformer_input = token_embeddings * math.sqrt(self.dim)
         transformer_input = self.pos_encoder(transformer_input)
         # transformer encoder
