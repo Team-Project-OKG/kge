@@ -6,7 +6,6 @@ transformer_lookup_embedder:
   # parameters specific to Transformer Lookup Embedder
 
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
-  #TODO: Check if it really does not need
   requires_start_and_end_token: False
 
   cut_padding_in_batch: True
@@ -14,6 +13,11 @@ transformer_lookup_embedder:
 
   bin_within_batch: False
   bin_size: 250
+
+  token_embedding_model:
+    use: False
+    name: distilbert
+    precache: 0
 
   pretrained:
     use: False
