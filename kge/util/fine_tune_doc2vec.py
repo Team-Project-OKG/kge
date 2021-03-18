@@ -93,7 +93,6 @@ def _sample_sentence(
                 sample = sample.replace(replace_text, random.choice(replace_list))
             else:  # replace within ner tag
                 sample = sample.replace(replace_text, random.choice(replace_list[random.choice(ner_tags)]))
-        sample = " ".join([word for word in sample.split() if word.isalpha()])  # clean sentence
         document_text = sample + "_|_0"
         output_writer.write(document_text + "\n")
 
@@ -128,7 +127,7 @@ def _create_negative_samples(
             reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
             for triple in reader:
                 counter += 1
-                document_text = " ".join([word for word in triple['sentence'].split() if word.isalpha()]) + "_|_1"
+                document_text = triple['sentence'] + "_|_1"
                 output_writer.write(document_text + "\n")
                 _sample_sentence(num_s, triple["sentence"], triple["subjects"], entities, output_writer)
                 _sample_sentence(num_r, triple["sentence"], triple["relations"], relations, output_writer)

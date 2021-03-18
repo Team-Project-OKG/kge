@@ -41,7 +41,7 @@ def _extract_sentences(
             reader = DataFileReader(open(AVRO_FILE, "rb"), DatumReader())
             for triple in reader:
                 # add to set instead of appending to list so both outputs of sentences_from_opiec can be used
-                sentences.add(tuple([word for word in triple["sentence"].split() if word.isalpha()]))
+                sentences.add(triple["sentence"])
             logging.info(f"Finished extracting sentences from {avro_filename} (runtime: {(time.time() - start_timestamp):.2f}s"
                          f"; total sentences extracted: {len(sentences)}).")
             reader.close()
