@@ -9,7 +9,7 @@ valid.metric: mean_reciprocal_rank_filtered
 # settings for the dataset to use
 dataset:
   type: olp
-  name: olpbench_bert
+  name: olpbench_small_bert
 
 # settings for ComplEx and the respective embedders
 model: complex
@@ -23,7 +23,7 @@ packed_lstm_lookup_embedder:                                                  #!
   token_embedding_model:
     use: True
     name: prajjwal1/bert-mini
-    precache: 15000
+    precache: 5
   pretrained:
     use: False
     file:

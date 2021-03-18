@@ -5,9 +5,11 @@ local/*
 /data/*
 !/data/olpbench/
 !/data/olpbench_small/
-!/data/olpbench_bert/
-!/data/olpbench_small_bert/
 /data/olpbench_small/*.pckl
+!/data/olpbench_bert/
+/data/olpbench_bert/*.pckl
+!/data/olpbench_small_bert/
+/data/olpbench_small_bert/*.pckl
 !data/olpbench100/
 /data/olpbench100/*.pckl
 !data/*.sh

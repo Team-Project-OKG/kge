@@ -22,7 +22,8 @@ any_mention_embedder:
   # performance due to decreased parallelization.
   bin_size: 0
 
-  # Token embedding models are used to get embeddings instead of using torch.nn.Embeddings.
+  # Token embedding models are used to get embeddings instead of using torch.nn.Embeddings. This freezes embeddings,
+  # i.e. they are not adjusted during training.
   token_embedding_model:
     # Enables or disables token embedding models
     use: False

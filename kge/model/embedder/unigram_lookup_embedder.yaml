@@ -14,6 +14,11 @@ unigram_lookup_embedder:
   cut_padding_in_batch: True
   set_padding_embeddings_to_0: True
 
+  token_embedding_model:
+    use: False
+    name: distilbert
+    precache: 0
+
   bin_within_batch: False
   bin_size: 0
 

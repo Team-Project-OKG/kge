@@ -24,7 +24,7 @@ class UnigramLookupEmbedder(MentionEmbedder):
         if self.pooling == 'max':  # should reduce dimensions to (batch_size, dim)
             pooled_embeddings = token_embeddings.max(dim=1).values
         elif self.pooling == 'mean':
-            lengths = (token_indexes > 0).sum(dim=1)
+            lengths = (~(token_indexes == 0)).sum(dim=1)
             pooled_embeddings = token_embeddings.sum(dim=1) / lengths.unsqueeze(1)
         elif self.pooling == 'sum':
             pooled_embeddings = token_embeddings.sum(dim=1)

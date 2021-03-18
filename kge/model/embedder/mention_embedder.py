@@ -109,7 +109,7 @@ class MentionEmbedder(LookupEmbedder):
     def embed(self, indexes: Tensor) -> Tensor:
         if self._bin_batch:
             token_indexes = self.lookup_tokens(indexes)
-            seq_lengths = (token_indexes > 0).sum(dim=1).cpu().data.numpy()
+            seq_lengths = (~(token_indexes == 0)).sum(dim=1).cpu().data.numpy()
             order = np.argsort(seq_lengths)
             rev_order = np.argsort(order)
             lengths, counts = np.unique(seq_lengths, return_counts=True)
@@ -198,20 +198,9 @@ class MentionEmbedder(LookupEmbedder):
             Dataset._pickle_dump_atomic(self._embeddings, pickle_filename)
 
     def _init_token_embedding_model(self):
-        if "distilbert" in self.get_option("token_embedding_model.name"):
-            if MentionEmbedder._pretrained_model is None:
-                model_class, pretrained_weights = (transformers.DistilBertModel, self.get_option("token_embedding_model.name"))
-                MentionEmbedder._pretrained_model = model_class.from_pretrained(pretrained_weights).to(self.config.get("job.device"))
-
-        elif "albert" in self.get_option("token_embedding_model.name"):
-            if MentionEmbedder._pretrained_model is None:
-                model_class, pretrained_weights = (transformers.AlbertModel, self.get_option("token_embedding_model.name"))
-                MentionEmbedder._pretrained_model = model_class.from_pretrained(pretrained_weights).to(self.config.get("job.device"))
-        elif "bert" in self.get_option("token_embedding_model.name"):
-            if MentionEmbedder._pretrained_model is None:
-                model_class, pretrained_weights = (transformers.BertModel, self.get_option("token_embedding_model.name"))
-                MentionEmbedder._pretrained_model = model_class.from_pretrained(pretrained_weights).to(self.config.get("job.device"))
-
+        if MentionEmbedder._pretrained_model is None:
+            MentionEmbedder._pretrained_model = transformers.AutoModel.from_pretrained(
+                self.get_option("token_embedding_model.name")).to(self.config.get("job.device"))
 
     def _init_precache(self):
         batch_size = self.config.get("train.batch_size")
