@@ -30,9 +30,13 @@ class BigramLookupEmbedder(MentionEmbedder):
         encoded = encoded + token_embeddings[:, :, 1:]
         # pooling on token embeddings
         if self.pooling == 'max':
-            pooled = (encoded * token_mask).max(dim=2).values
+            encoded = encoded.transpose(1, 2)
+            encoded[token_mask.squeeze(1) == 0] = -float("inf")
+            pooled = encoded.max(dim=1).values
         elif self.pooling == 'sum':
             pooled = (encoded * token_mask).sum(dim=2)
+        elif self.pooling == 'mean':
+            pooled = (encoded * token_mask).sum(dim=2) / token_mask.sum(dim=2)
         else:
             raise NotImplementedError
         return pooled
