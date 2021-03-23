@@ -4,7 +4,7 @@ import math
 
 from torch import Tensor
 import torch
-import transformers
+#import transformers
 import numpy as np
 
 from gensim.models import KeyedVectors

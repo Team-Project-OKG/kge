@@ -456,7 +456,18 @@ class TrainingJob(TrainingOrEvaluationJob):
             # update parameters
             batch_optimizer_time = -time.time()
             if not self.is_forward_only:
-                self.optimizer.step()
+                try:
+                    if(self.config.get("transformer_lookup_embedder.custom_lr")):
+                        _dim = self.model._entity_embedder.dim
+                        _warmup = self.config.get("transformer_lookup_embedder.warmup")
+                        _step = batch_index + 1 + (len(self.loader) * (self.epoch-1)) #batches per epoch instead of batch_size
+                        _lr = (_dim ** (-0.5) * min(_step ** (-0.5), _step * _warmup ** (-1.5)))
+                        self.optimizer.defaults['lr'] = _lr
+                        print(",  Step: " +str(_step) +",  lr:" +str(self.optimizer.defaults['lr']))
+                    self.optimizer.step()
+                except KeyError:
+                    pass
+
             batch_optimizer_time += time.time()
 
             # update batch trace with the results

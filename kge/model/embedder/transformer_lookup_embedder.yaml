@@ -4,7 +4,14 @@ transformer_lookup_embedder:
   class_name: TransformerLookupEmbedder
 
   # parameters specific to Transformer Lookup Embedder
-
+  nhead: 8
+  num_layers: 3
+  pooling: mean
+  dim_ff: 2048
+  factor: 1
+  warmup: 4000
+  custom_lr: True
+  transformer_dropout: 0.1
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
   requires_start_and_end_token: False
 
@@ -30,10 +37,7 @@ transformer_lookup_embedder:
 
   # settings for lookup embedders (see lookup_embedder.yaml for explanations)
   dim: 512
-  nhead: 8
-  num_layers: 3
-  pooling: mean
-  dim_ff: 1024
+
   initialize: normal_
   initialize_args:
     +++: +++
