@@ -39,11 +39,6 @@ dataset:
   #files.valid.type: triples
 
   pickle: True
-
-  byte_pair_encoding: False
-  iterations_entities: 100
-  iterations_relations: 100
-
   # list of all tokens that should be regarded as padding, i.e. receive an embedding of 0
   padding_indexes: [0, 2, 3]
 

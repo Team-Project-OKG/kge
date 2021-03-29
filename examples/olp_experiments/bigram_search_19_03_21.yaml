@@ -1,4 +1,4 @@
-import: [lstm_lookup_embedder]                                         #!!! adjust if model is changed
+import: [bigram_lookup_embedder]                                         #!!! adjust if model is changed
 
 # general settings for the hyperparameter optimization job
 job.type: search
@@ -6,23 +6,22 @@ search.type: ax
 valid.metric: mean_reciprocal_rank_filtered
 
 ax_search:
-  num_trials: 30
-  num_sobol_trials: 30
+  num_trials: 15
+  num_sobol_trials: 15
   parameters:
     - name: train.optimizer.default.args.lr
       type: range
-      bounds: [0.05, 0.2]
+      bounds: [0.01, 0.2]
     - name: train.optimizer.default.args.weight_decay
       type: range
       bounds: [0.0000000001, 0.000001]
-    - name: lstm_lookup_embedder.dim
+    - name: bigram_lookup_embedder.dim
       type: choice
       values: [256, 512]
       is_ordered: True
-    - name: lstm_lookup_embedder.dropout
+    - name: bigram_lookup_embedder.dropout
       type: range
       bounds: [0.0, 0.1]
-
 
 
 # settings for the dataset to use
@@ -34,12 +33,14 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: lstm_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: lstm_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: bigram_lookup_embedder                           #!!! adjust if model is changed
+  relation_embedder.type: bigram_lookup_embedder                         #!!! adjust if model is changed
 
-lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+bigram_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
   initialize: xavier_uniform_ # is Glorot initialization
-
+  bin_within_batch: False  # if True, then bin_size is also activated
+  bin_size: 50
+  pooling: 'sum'
 
 # settings for the training job of each hyperparameter combination
 train:
@@ -62,10 +63,11 @@ negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
-  num_samples:
-    s: 8192
-    p: 0          # -1 means: same as s
-    o: -1
+  samples_within_batch: True
+  #num_samples:
+  #  s: 8192
+  #  p: 0          # -1 means: same as s
+  #  o: -1
 
 
 # settings for the evaluation job

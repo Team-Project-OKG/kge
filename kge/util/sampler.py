@@ -645,7 +645,7 @@ class OlpNegativeSample(BatchNegativeSample):
 
         # fill in the unique negative scores. first column is left empty
         # to hold positive scores
-        scores[:, :] = pre_scores[:, :-1]  # Todo: Why do we drop the last column of pre_scores?
+        scores[:, :] = pre_scores[:, :-1]
         scores[drop_rows, drop_index[drop_rows]] = pre_scores[drop_rows, -1]
         self.forward_time += time.time()
         return scores
