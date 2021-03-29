@@ -593,7 +593,10 @@ class DefaultSharedNegativeSample(BatchNegativeSample):
 
 
 class OlpNegativeSample(BatchNegativeSample):
-
+    """
+    For OLP task: sample unique entities and relations within a batch. Calculate
+    scores collectively for negative samples as well as true triples (= pre_scores).
+    """
     def __init__(
         self,
         config: Config,
@@ -620,7 +623,6 @@ class OlpNegativeSample(BatchNegativeSample):
         all_scores = OlpNegativeSample._score_unique_targets_olp(model, batch, unique_entities)
         return all_scores
 
-
     def score(self, model, pre_scores, indexes=None) -> torch.Tensor:
         if self._implementation != "batch":
             return super().score(model, indexes)
@@ -646,18 +648,16 @@ class OlpNegativeSample(BatchNegativeSample):
 
         # fill in the unique negative scores. first column is left empty
         # to hold positive scores
-        scores[:, :] = pre_scores[:, :-1]  # Todo: Why do we drop the last column of pre_scores?
+        scores[:, :] = pre_scores[:, :-1]
         scores[drop_rows, drop_index[drop_rows]] = pre_scores[drop_rows, -1]
         self.forward_time += time.time()
         return scores
 
 
-
 class OlpUniformNegativeSample(KgeSampler):
     """
-    Sample shared entities within the batch
+    Relevant for OLP task. Implement basic functionality to sample shared entities within a batch.
     """
-
     def __init__(self, config: Config, configuration_key: str, dataset: Dataset):
         super().__init__(config, configuration_key, dataset)
 
