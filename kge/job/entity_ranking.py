@@ -1,12 +1,17 @@
 import math
+import os
 import time
 import traceback
+
+import numpy as np
 
 import torch
 import kge.job
 from kge.job import EvaluationJob, Job
 from kge import Config, Dataset
 from collections import defaultdict
+
+from kge.misc import kge_base_dir
 
 
 class EntityRankingJob(EvaluationJob):
@@ -184,6 +189,11 @@ class EntityRankingJob(EvaluationJob):
             # return true entities for replacing precomputed true_scores to avoid floating point issues
             o_true_scores, s_true_scores, o_true_entities, s_true_entities = self.compute_true_scores(batch_coords)
 
+            best_subjects = [list() for i in range(len(batch_coords[0]))]
+            best_objects = [list() for i in range(len(batch_coords[0]))]
+            best_subject_scores = [list() for i in range(len(batch_coords[0]))]
+            best_object_scores = [list() for i in range(len(batch_coords[0]))]
+
             # autotune chunk number to avoid OOM errors
             done = False
             while not done:
@@ -202,6 +212,9 @@ class EntityRankingJob(EvaluationJob):
                         chunk_size = self.config.get("entity_ranking.chunk_size")
                     else:
                         chunk_size = self.dataset.num_entities()
+
+                    #!!!!!!!!!
+                    chunk_size = 190
 
                     # process chunk by chunk
                     for chunk_number in range(math.ceil(num_entities / chunk_size)):
@@ -263,6 +276,19 @@ class EntityRankingJob(EvaluationJob):
                             ranks_and_ties_for_ranking["o" + ranking][0] += o_rank_chunk
                             ranks_and_ties_for_ranking["o" + ranking][1] += o_num_ties_chunk
 
+                        chunk_best_subjects = np.argsort(-(scores_po_filt.cpu().detach().numpy()), axis=1)[:, 0:5]
+                        chunk_best_objects = np.argsort(-(scores_sp_filt.cpu().detach().numpy()), axis=1)[:, 0:5]
+                        chunk_best_subject_scores = [scores_po_filt[i, chunk_best_subjects[i]] for i in range(len(scores_po_filt))]
+                        chunk_best_object_scores = [scores_sp_filt[i, chunk_best_objects[i]] for i in range(len(scores_sp_filt))]
+                        chunk_best_subjects = chunk_best_subjects + (chunk_number * chunk_size)
+                        chunk_best_objects = chunk_best_objects + (chunk_number * chunk_size)
+
+                        for i in range(len(chunk_best_subjects)):
+                            best_subject_scores[i] = best_subject_scores[i] + chunk_best_subject_scores[i].tolist()
+                            best_subjects[i] = best_subjects[i] + chunk_best_subjects[i].tolist()
+                            best_object_scores[i] = best_object_scores[i] + chunk_best_object_scores[i].tolist()
+                            best_objects[i] = best_objects[i] + chunk_best_objects[i].tolist()
+
                     # we are done with the chunk
                     done = True
                 except RuntimeError as e:
@@ -290,6 +316,32 @@ class EntityRankingJob(EvaluationJob):
                     self.config.set(
                         "entity_ranking.chunk_size", chunk_size, log=True
                     )
+
+            for i in range(len(chunk_best_subjects)):
+                indexes = np.argsort(best_subject_scores[i])[::-1][0:5]
+                best_subjects[i] = [best_subjects[i][j] for j in indexes]
+                indexes = np.argsort(best_object_scores[i])[::-1][0:5]
+                best_objects[i] = [best_objects[i][j] for j in indexes]
+
+            entity_strings = self.dataset._meta['entity_ids']
+            relation_strings = self.dataset._meta['relation_ids']
+
+            with open(os.path.join(kge_base_dir(), "data", "model_predictions.txt"), "w") as f:
+                for i in range(len(batch_coords[0])):
+                    true_triple = f"{entity_strings[batch_coords[0][i][0]]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[int(o_true_entities[i].item())]}"
+                    f.write(f"True triple (object):\n{true_triple}\n")
+                    f.write("Best ranked triples (object):\n")
+                    for index in best_objects[i]:
+                        triple = f"{entity_strings[batch_coords[0][i][0]]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[index]}"
+                        f.write(f"{triple}\n")
+                    f.write("\n")
+                    true_triple = f"{entity_strings[int(s_true_entities[i].item())]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[batch_coords[0][i][2]]}"
+                    f.write(f"True triple (subject):\n{true_triple}\n")
+                    f.write("Best ranked triples (subject):\n")
+                    for index in best_subjects[i]:
+                        triple = f"{entity_strings[index]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[batch_coords[0][i][2]]}"
+                        f.write(f"{triple}\n")
+                    f.write("\n")
 
             # We are done with all chunks; calculate final ranks from counts
             s_ranks = self._get_ranks(
