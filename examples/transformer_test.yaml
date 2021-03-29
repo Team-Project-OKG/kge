@@ -15,24 +15,36 @@ complex:
 
 # Best results from 20210123-212939-olpbench_transformer_random_search/00006
 transformer_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+  cut_padding_in_batch: True
+  set_padding_embeddings_to_0: True
+  bin_within_batch: True
+  bin_size: 1000
   initialize: xavier_uniform_ # is Glorot initialization
   dim: 256
-  dropout: 0.2
+  transformer_dropout: 0.2
+  num_layers: 4
+  nhead: 8
+  dim_ff: 2048
+  warmup: 4000
+  custom_lr: True
 
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
   max_epochs: 1
-  batch_size: 1024
+  batch_size: 2048
+
   subbatch_auto_tune: True
+
   optimizer:
     +++: +++
     default:
       args:
         +++: +++
+        eps: 1e-9
         lr: 0.0008042458770796657
         weight_decay: 3.4979861306445674e-07
-      type: Adagrad
+      type: Adam
 
 # settings for negative sampling
 # use number of replacements equal to the batch size to approximate Samuel's negative sampling algorithm
