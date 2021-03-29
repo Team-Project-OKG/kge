@@ -461,7 +461,11 @@ negative_sampling:
   # 'triple' (e.g., for TransE or RotatE in the current implementation).
   implementation: triple
 
-  # TODO: explanation
+  # Implemetation of negative sampling where negative samples are created from entities within the current batch.
+  # Each unique entity is used as a negative sample for all _po and sp_ queries.
+  #This result in num_samples of  2*unique_entities
+  #
+  #
   # Can only be used with
   # sampling_type: uniform
   # shared: True
