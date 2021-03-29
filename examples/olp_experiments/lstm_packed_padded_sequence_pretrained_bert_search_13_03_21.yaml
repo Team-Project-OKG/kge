@@ -41,6 +41,7 @@ packed_lstm_lookup_embedder:
     use: True
     name: prajjwal1/bert-mini
     precache: 15000
+    freeze: True
   dim: 256
   num_layers: 1
 

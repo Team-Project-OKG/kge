@@ -83,24 +83,34 @@ class MentionEmbedder(LookupEmbedder):
             return token_seq
 
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
+        """
+        Gets embeddings for tokens from token embedding model or embeddings tensor.
+        Token embedding model can be frozen for performance.
+        """
         if self.get_option("token_embedding_model.use"):
-            if self._precached_embeddings is not None:
-                original_shape = token_indexes.shape
-                replacement_index = token_indexes[:,0] < 0
-                precached_indexes = token_indexes[replacement_index][:,0]* -1 - 1
-                token_indexes = token_indexes[replacement_index == False]
-                new_embeddings = torch.empty([original_shape[0], original_shape[1], self.dim], device=token_indexes.device)
-
-            with torch.no_grad():
-                embeddings = self._pretrained_model(token_indexes, (~ (token_indexes == 0)))[0] * ((~ (token_indexes == 0))[..., None])
-
+            if self.get_option("token_embedding_model.freeze"):
                 if self._precached_embeddings is not None:
-                    new_embeddings[replacement_index == False] = embeddings
-                    lookup = self._precached_embeddings[precached_indexes][:, :original_shape[1]]
-                    new_embeddings[replacement_index] = lookup
+                    original_shape = token_indexes.shape
+                    replacement_index = token_indexes[:, 0] < 0
+                    precached_indexes = token_indexes[replacement_index][:, 0] * -1 - 1
+                    token_indexes = token_indexes[~ replacement_index]
+                    new_embeddings = torch.empty([original_shape[0], original_shape[1], self.dim], device=token_indexes.device)
 
-                    embeddings = new_embeddings
+                with torch.no_grad():
+                    embeddings = self._pretrained_model(token_indexes, (~ (token_indexes == 0)))[0] \
+                                 * ((~ (token_indexes == 0))[..., None])
 
+                    if self._precached_embeddings is not None:
+                        new_embeddings[~ replacement_index] = embeddings
+                        lookup = self._precached_embeddings[precached_indexes][:, :original_shape[1]]
+                        new_embeddings[replacement_index] = lookup
+
+                        embeddings = new_embeddings
+
+                    return embeddings
+            else:
+                embeddings = self._pretrained_model(token_indexes, (~ (token_indexes == 0)))[0] \
+                                 * ((~ (token_indexes == 0))[..., None])
                 return embeddings
         else:
             return self._embeddings(token_indexes.long())

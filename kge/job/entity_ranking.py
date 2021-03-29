@@ -181,10 +181,11 @@ class EntityRankingJob(EvaluationJob):
 
             # compute true scores beforehand, since we can't get them from a chunked
             # score table
+            # return true entities for replacing precomputed true_scores to avoid floating point issues
             o_true_scores, s_true_scores, o_true_entities, s_true_entities = self.compute_true_scores(batch_coords)
 
+            # autotune chunk number to avoid OOM errors
             done = False
-
             while not done:
                 try:
                     # default dictionary storing rank and num_ties for each key in rankings
@@ -463,6 +464,10 @@ class EntityRankingJob(EvaluationJob):
         )
 
     def compute_true_scores(self, batch_coords):
+        """
+        Computes true scores for batch and returns the corresponding entity.
+        This is important to be compatible to the OLPEntityRanking
+        """
         batch = batch_coords[0].to(self.device)
         s, p, o = batch[:, 0], batch[:, 1], batch[:, 2]
         o_true_scores = self.model.score_spo(s, p, o, "o").view(-1)

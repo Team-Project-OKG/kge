@@ -10,6 +10,10 @@ from kge.job import EvaluationJob, Job
 from collections import defaultdict
 
 class OLPEntityRankingJob(EntityRankingJob):
+    """
+    OLP Entity / Mention ranking evaluation protocol
+    Overwrites the functions in that Mention Ranking differs from Entity Ranking.
+    """
 
     def __init__(self, config: Config, dataset: Dataset, parent_job, model):
         super().__init__(config, dataset, parent_job, model)
@@ -20,6 +24,8 @@ class OLPEntityRankingJob(EntityRankingJob):
 
     def _prepare(self):
         super()._prepare()
+        """ Uses indexes in the dataloader to be able to fetch corresponding alternative mentions. """
+
         self.loader = torch.utils.data.DataLoader(
             range(self.triples.shape[0]),
             collate_fn=self._collate,
@@ -30,7 +36,7 @@ class OLPEntityRankingJob(EntityRankingJob):
         )
 
     def _collate(self, batch):
-        "Looks up true triples for each triple in the batch"
+        "Looks up true triples and the corresponding alternative mentions for each triple in the batch"
         split = self.config.get("eval.split")
 
         label_coords = []
@@ -57,8 +63,6 @@ class OLPEntityRankingJob(EntityRankingJob):
         else:
             test_label_coords = torch.zeros([0, 2], dtype=torch.long)
 
-        # batch_data = torch.cat(batch_data).reshape((-1, 3))
-
         if self.batch_size != 1:
             alternative_subject_mentions = torch.cat(tuple(
                 itemgetter(*batch)(self.dataset._alternative_subject_mentions[split])))
@@ -71,6 +75,9 @@ class OLPEntityRankingJob(EntityRankingJob):
         return batch_data, label_coords, test_label_coords, alternative_subject_mentions, alternative_object_mentions
 
     def compute_true_scores(self, batch_coords):
+        """
+        Computes true scores for batch and returns the corresponding entity.
+        """
         alternative_subject_mentions = batch_coords[3].to(self.device)
         alternative_object_mentions = batch_coords[4].to(self.device)
         o_true_scores_all_mentions = self.model.score_spo(alternative_object_mentions[:, 0],
