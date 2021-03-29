@@ -1,27 +1,22 @@
 from __future__ import annotations
 
 import os
-import uuid
 
 import torch
 from torch import Tensor
 import numpy as np
 import pandas as pd
-import pickle
-import inspect
 from kge.dataset import Dataset
-import time
 
-from kge import Config, Configurable
-import kge.indexing
+from kge import Config
 from kge.indexing import create_default_index_functions
 from kge.misc import kge_base_dir
 from kge.util.byte_pair_encoding import BytePairEncodingVocab
 
-from typing import Dict, List, Any, Callable, Union, Optional, Tuple
+from typing import Dict, List, Callable, Union, Optional, Tuple
 
 
-# TP: class to contain all information on an OLP dataset
+# class to contain all information on an OLP dataset
 class OLPDataset(Dataset):
 
     def __init__(self, config, folder=None):
@@ -74,7 +69,6 @@ class OLPDataset(Dataset):
         # Dictionary that maps triples to their index
         self._triple_indexes: Dict[str, Dict] = {}
 
-        # TODO: Check indexing and how it comes up in the remaining pipeline. Create new indizes as necessary.
         self.index_functions: Dict[str, Callable] = {}
         create_default_index_functions(self)
 
@@ -189,8 +183,7 @@ class OLPDataset(Dataset):
                 1 if tensor.ndim == 1 else tensor.shape[0] for tensor in self._alternative_subject_mentions[key])
         return self._nr_alternative_subjects[key]
 
-        # Return the number of alternative object mentions for a key
-
+    # Return the number of alternative object mentions for a key
     def nr_alternative_objects(self, key: str) -> int:
         "Return the number of alternative objects for the given key in the OLP dataset."
         if not key in self._nr_alternative_objects.keys() or self._nr_alternative_objects[key] is None:
@@ -218,6 +211,8 @@ class OLPDataset(Dataset):
         """
         return self.map_indexes(indexes, "relation_token_ids")
 
+    # return the map of a mention id to its token ID map depending on the key (entity or relation)
+    # return bpe subtoken mappings if bpe is used
     def get_mention_to_token_id_map(self, key: str):
         if "entity" in key:
             if hasattr(self, 'bpe_vocab') and self.config.get("dataset.byte_pair_encoding"):
@@ -231,7 +226,6 @@ class OLPDataset(Dataset):
                 return self.relation_mentions_to_token_ids()
         else:
             raise NameError(f"Key '{self.configuration_key}' has to contain 'entity' or 'relation'!")
-
 
     def entity_mentions_to_subtoken_ids(self, overwrite=False):
         """
@@ -313,7 +307,6 @@ class OLPDataset(Dataset):
                 lengths_[k] = len(split_)
         return map_, lengths_, actual_max
 
-
     # create mappings of entity mentions to a series of token ids
     def entity_mentions_to_token_ids(self):
         if "entities" not in self._mentions_to_token_ids:
@@ -324,7 +317,7 @@ class OLPDataset(Dataset):
             self._max_tokens_per_entity = actual_max
         return self._mentions_to_token_ids["entities"]
 
-    # create mappings of relation mentions to a series of token ids_nr_alternative_subjects
+    # create mappings of relation mentions to a series of token ids
     def relation_mentions_to_token_ids(self):
         if "relations" not in self._mentions_to_token_ids:
             map_, lengths_, actual_max = self.load_token_sequences("relation_id_token_ids", self._num_relations,
@@ -459,15 +452,18 @@ class OLPDataset(Dataset):
             self._nr_alternative_subjects[key] = num_subjects
             self._nr_alternative_objects[key] = num_objects
 
+            # determine bins of sequence length binning during loading of triples if it is used
             if self.config.get(f"negative_sampling.triple_sampling.type") == "sequence_bins" and key == "train":
                 self._determine_bins(triples.numpy(), os.path.join(self.folder, filename))
 
         return self._triples[key], self._alternative_subject_mentions[key], self._alternative_object_mentions[key]
 
-    def _determine_bins(self,
-        triples: np.array,
-        filename: str):
-
+    def _determine_bins(self, triples: np.array, filename: str):
+        """
+        Load or create the three-dimensional matrix of sequence lengths to triple IDs. This is used to determine which
+        sequence lengths are included in each bin for sequence length binning by calling _find_boundaries. Then, the
+        triples IDs of each bin are saved in the instance attribute _bins.
+        """
         seq_len_indexes = None
         use_pickle = self.config.get("dataset.pickle")
 
@@ -508,14 +504,12 @@ class OLPDataset(Dataset):
             counter: np.array,
             min_support: Int
     ) -> Tuple[List, List, List]:
-
         """
         Recursively builds boundaries for bins ascendingly so that each bin includes at least min_support triples.
 
         Bins aim to have minimum variance in sequence lengths for subjects, predicates and objects. The numbers
         specified in a boundary is the maximum sequence length for (subject, predicate, object).
         """
-
         boundaries = []
         sizes = []
         bin_indexes = []
@@ -659,15 +653,16 @@ class OLPDataset(Dataset):
         copy._max_tokens_per_entity = self.max_tokens_per_entity()
         copy._max_tokens_per_relation = self.max_tokens_per_relation()
         copy._triples = self._triples
+        copy._triple_indexes = self._triple_indexes
         copy._mentions_to_token_ids = self._mentions_to_token_ids
+        copy._mention_lengths = self._mention_lengths
         copy._alternative_subject_mentions = self._alternative_subject_mentions
         copy._alternative_object_mentions = self._alternative_object_mentions
+        copy._nr_alternative_subjects = self._nr_alternative_subjects
+        copy._nr_alternative_objects = self._nr_alternative_objects
+        copy._nr_alternative_subjects = self._nr_alternative_subjects
+        copy._nr_alternative_subjects = self._nr_alternative_objects
         copy._meta = self._meta
         copy._indexes = self._indexes
         copy.index_functions = self.index_functions
         return copy
-
-    # TODO: methods that have not been adjusted (as not necessary atm or will be understood better later on):
-    # - create from and save_to (loads/saves a dataset from/to a checkpoint)
-    # - pickle-related methods
-    # - indexing functions

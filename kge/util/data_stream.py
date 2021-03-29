@@ -1,7 +1,7 @@
 """
 Module for instantiating a data stream with fast, random sampling.
 
-From https://indico.io/blog/fast-method-stream-data-from-big-data-sources/, adjusted and bug fixed
+Adjusted and bug fixed from https://indico.io/blog/fast-method-stream-data-from-big-data-sources/,
 """
 
 import os
@@ -111,7 +111,7 @@ class WordStream(object):
 
     def decode_line(self, s):
         """
-        Create TaggedDocument from line
+        Create TaggedDocument from line or return line itself
         """
         if self.as_tagged_doc:
             words, tag = s.decode("utf-8").strip().split("_|_")

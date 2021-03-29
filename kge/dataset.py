@@ -446,7 +446,7 @@ NOT RECOMMENDED: You can update the timestamp of all cached files using:
         return self.num_entities()
 
     def vocab_size_relations(self) -> int:
-        "Return the number of relations for entities given the dataset."
+        "Return the number of relations for relations given the dataset."
         return self.num_relations()
 
     def split(self, split: str) -> Tensor:
@@ -463,7 +463,7 @@ NOT RECOMMENDED: You can update the timestamp of all cached files using:
     ) -> Union[str, List[str], np.ndarray]:
         """Decode indexes to entity ids.
 
-        See `Dataset#map_indexes` for a description of the `indexes` argument.
+        See `Dataset#map_indexes` for a description of theentities `indexes` argument.
         """
         return self.map_indexes(indexes, "entity_ids")
 
@@ -520,7 +520,7 @@ NOT RECOMMENDED: You can update the timestamp of all cached files using:
 
         See `kge.indexing.create_default_index_functions()` for the indexes available by
         default.
-
+entities
         """
         if key not in self._indexes:
             use_pickle = self.config.get("dataset.pickle")

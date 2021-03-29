@@ -1,4 +1,9 @@
 dataset:
+  # general information
+  name: olpbench_small
+  type: olp
+
+  # map files
   files.entity_ids.filename: entity_id_map.del
   files.entity_ids.type: map
   files.relation_ids.filename: relation_id_map.del
@@ -12,27 +17,18 @@ dataset:
   files.relation_id_token_ids.filename: relation_id_tokens_ids_map.del
   files.relation_id_token_ids.type: sequence_map
 
-  name: olpbench-small
-#  num_entities: 367
-#  num_relations: 142
-#  num_tokens_entities: 49
-#  num_tokens_relations: 195
-#  max_tokens_per_entity: 7
-#  max_tokens_per_relation: 9
-
+  # training, valid and test data
   files.test.filename: test_data.del
   files.test.size: 10
   files.test.type: quintuples
   files.train.filename: train_data_thorough.del
   files.train.size: 126
   files.train.type: triples
-  #files.valid.filename: validation_data_all.del
   files.valid.filename: validation_data_linked.del
   files.valid.size: 10
   files.valid.type: quintuples
 
+  # additional configurations
   pickle: True
-  # list of all tokens that should be regarded as padding, i.e. receive an embedding of 0
   padding_indexes: [0, 2, 3]
-
   has_start_and_end_token: True

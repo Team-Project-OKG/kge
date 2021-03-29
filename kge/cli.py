@@ -296,11 +296,13 @@ def main():
         if args.command == "start" and not args.run:
             config.log("Job created successfully.")
         else:
-            # load data
+            # load data depending on type of dataset
             if config.get("dataset.type") == "olp":
                 dataset = OLPDataset.create(config)
-            else:
+            elif config.get("dataset.type") == "lp":
                 dataset = Dataset.create(config)
+            else:
+                KeyError(f"Unexpected dataset.type {config.get('dataset.type')}: use 'lp' or 'olp' instead.")
 
             # let's go
             if args.command == "resume":

@@ -9,6 +9,9 @@ from kge.misc import kge_base_dir
 def _convert_to_word2vec(
         filename: str
 ):
+    """
+    Convert file of pretrained embeddings in GloVe format to word2vec format.
+    """
     folder = os.path.join(kge_base_dir(), "pretrained")
     input_file = os.path.join(folder, filename)
     index = filename.rindex(".")
@@ -17,6 +20,6 @@ def _convert_to_word2vec(
     glove2word2vec(input_file, output_file)
 
 
-# give file name as first command line argument
+# give file name in folder 'pretrained' as first command line argument
 if __name__ == '__main__':
     _convert_to_word2vec(sys.argv[1])

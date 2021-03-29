@@ -95,6 +95,7 @@ class KvsAllIndex:
             ]
         return torch.from_numpy(triples_sorted)
 
+
 class OLPKvsAllIndex(KvsAllIndex):
     """Construct an index from keys (e.g., sp) to all its values (o), also considering alternative mentions.
 
@@ -195,6 +196,8 @@ def index_KvsAll(dataset: "Dataset", split: str, key: str):
         raise ValueError()
 
     name = split + "_" + key + "_to_" + value
+
+    # create a KvsAllIndex or OLPKvsAllIndex depending on the class of the dataset
     if not dataset._indexes.get(name):
         if dataset.__class__.__name__ == "OLPDataset" and value_col != 1:
             triples, alternative_subject_mentions, alternative_object_mentions = dataset.split_olp(split)
