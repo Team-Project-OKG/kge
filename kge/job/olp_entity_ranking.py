@@ -4,9 +4,8 @@ from operator import itemgetter
 
 import torch
 import kge.job
-from kge.job.entity_ranking import EntityRankingJob
 from kge import Config, Dataset
-from kge.job import EvaluationJob, Job
+from kge.job import EvaluationJob, Job, EntityRankingJob
 from collections import defaultdict
 
 class OLPEntityRankingJob(EntityRankingJob):
