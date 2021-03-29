@@ -6,7 +6,7 @@ unigram_lookup_embedder:
   # parameters specific to Unigram Lookup Embedder
 
   # which pooling algorithm to use ("max", "sum", "mean")
-  pooling: "max"
+  pooling: "mean"
 
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
   requires_start_and_end_token: False

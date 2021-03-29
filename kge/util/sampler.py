@@ -358,6 +358,7 @@ class BatchNegativeSample(Configurable):
             raise NotImplementedError
         return all_scores
 
+    # for OLP task negative sampling: score all unique entities within a batch
     @staticmethod
     def _score_unique_targets_olp(model, triples, unique_targets) -> torch.Tensor:
         return model.score_olp_neg_sampling(triples[:, S], triples[:, O], triples[:,P], unique_targets)
@@ -592,6 +593,10 @@ class DefaultSharedNegativeSample(BatchNegativeSample):
 
 
 class OlpNegativeSample(BatchNegativeSample):
+    """
+    For OLP task: sample unique entities and relations within a batch. Calculate
+    scores collectively for negative samples as well as true triples (= pre_scores).
+    """
 
     def __init__(
         self,
@@ -640,7 +645,6 @@ class OlpNegativeSample(BatchNegativeSample):
 
         # create the complete scoring matrix
         device = self.positive_triples.device
-        #scores = torch.empty(chunk_size, num_unique, device=device)
         scores = torch.empty(chunk_size, pre_scores.shape[1] - 1, device=device)
 
         # fill in the unique negative scores. first column is left empty
@@ -651,10 +655,9 @@ class OlpNegativeSample(BatchNegativeSample):
         return scores
 
 
-
 class OlpUniformNegativeSample(KgeSampler):
     """
-    Sample shared entities within the batch
+    Relevant for OLP task. Implement basic functionality to sample shared entities within a batch.
     """
 
     def __init__(self, config: Config, configuration_key: str, dataset: Dataset):
@@ -668,27 +671,6 @@ class OlpUniformNegativeSample(KgeSampler):
         self, positive_triples: torch.Tensor, slot: int, num_samples: int
     ):
         batch_size = len(positive_triples)
-
-        # Todo: add replacement
-        '''
-        # determine number of distinct negative samples for each positive
-        if self.with_replacement:
-            # Simple way to get a sample from the distribution of number of distinct
-            # values in the negative sample (for "default" type: WR sampling except the
-            # positive, hence the - 1)
-            num_unique = len(
-                np.unique(
-                    np.random.choice(
-                        self.vocabulary_size[slot]
-                        if self.shared_type == "naive"
-                        else self.vocabulary_size[slot] - 1,
-                        num_samples,
-                        replace=True,
-                    )
-                )
-            )
-        else:  # WOR -> all samples distinct
-        '''
         unique_entities = positive_triples[:,[0,2]].unique()
         num_unique = len(unique_entities)
         self._init_num_samples(num_unique)
@@ -698,7 +680,6 @@ class OlpUniformNegativeSample(KgeSampler):
 
         positives = positive_triples[:, slot].numpy()
         drop_index = np.random.choice(num_unique + 1, batch_size, replace=True)
-        # TODO can we do the following quicker?
         unique_samples_index = {s: j for j, s in enumerate(unique_samples)}
         for i, v in [
             (i, unique_samples_index.get(positives[i]))

@@ -1,6 +1,6 @@
-import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
+# Best hyperparameters for LSTM with binning within batch
 
-
+import: [packed_lstm_lookup_embedder]
 
 # settings for the dataset to use
 dataset:
@@ -11,10 +11,10 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: packed_lstm_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: packed_lstm_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: packed_lstm_lookup_embedder
+  relation_embedder.type: packed_lstm_lookup_embedder
 
-packed_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
   bin_within_batch: True  # if True, then bin_size is also activated
   bin_size: 500
@@ -35,26 +35,14 @@ train:
         +++: +++
         lr: 0.055758330747485166
         weight_decay: 7.179384912855923e-07
-#  lr_scheduler: ReduceLROnPlateau
-#  lr_scheduler_args:
-#    mode: max
-#    patience: 4'
-
 
 # settings for negative sampling
-# use number of replacements equal to the batch size to approximate Samuel's negative sampling algorithm
 # num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
-#!!! look into how to reproduce Samuel's negative sampling algorithm
 negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
   samples_within_batch: True
-  #num_samples:
-  #  s: 8192
-  #  p: 0          # -1 means: same as s
-  #  o: -1
-
 
 # settings for the evaluation job
 eval:

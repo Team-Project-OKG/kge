@@ -12,7 +12,7 @@ class Bidict(dict):
     keeping track of the inverse dictionary. The original
     standard dict: N-to-1
     bidict[key_1] = value_1, bidict[key_2] = value_2
-    inverse dict : 1-to-N
+    inverse dict: 1-to-N
     bidict[value_1] = [key_1, key_2]
     """
 
@@ -35,9 +35,7 @@ class Bidict(dict):
         super(Bidict, self).__delitem__(key)
 
     def get_dict(self):
-        """
-        Restores the uni-directional native dictionary.
-        """
+        """ Restores the uni-directional native dictionary."""
         return super(Bidict, self).copy()
 
 
@@ -52,11 +50,10 @@ class BytePairEncodingVocab:
             Find most frequent byte-pair
             Merge most frequent byte-pair into new token
             Replace individual character pairs by new, most frequent token in vocab
-
     Output:
-    (ent/rel)_subtoken_lookup: Lookup of token index (int) -> list of subtoken indexes
-    num_(ent/rel)_subtokens: unique number of subtokens (int)
-    (ent/rel)_subtoken_ids: Vocabulary of subtoken indexes to their string representation (dict)
+        (ent/rel)_subtoken_lookup: Lookup of token index (int) -> list of subtoken indexes
+        num_(ent/rel)_subtokens: unique number of subtokens (int)
+        (ent/rel)_subtoken_ids: Vocabulary of subtoken indexes to their string representation (dict)
     """
 
     def __init__(self,
@@ -103,7 +100,6 @@ class BytePairEncodingVocab:
         self.ent_subtoken_ids = {**special_tokens, **index_character_map_ent.get_dict()}  # add special tokens again
         self.num_ent_subtokens = len(self.ent_subtoken_ids)
         time_ent_end = time.time()
-        # output_str_ent = [[self.ent_subtoken_ids[y] for y in x] for idx, x in self.ent_subtoken_lookup.items()] # restore strings from subtokens
         olp_dataset.config.log(f"Ran {iter_ent} iterations of byte-pair encoding for entities.\n"
                                f"Found {self.num_ent_subtokens} unique subtokens in {time_ent_end - time_ent_start:.2f}s")
 
@@ -127,7 +123,6 @@ class BytePairEncodingVocab:
         time_rel_end = time.time()
         olp_dataset.config.log(f"Ran {iter_rel} iterations of byte-pair encoding for relations.\n"
                                f"Found {self.num_rel_subtokens} unique subtokens in {time_rel_end - time_rel_start:.2f}s")
-        # output_str_rel = [[self.rel_subtoken_ids[y] for y in x] for idx, x in self.rel_subtoken_lookup.items()]
 
     def run_bpe(self, iterations,
                 subtokens,
@@ -185,7 +180,6 @@ class BytePairEncodingVocab:
         bigrams = bigrams[(non_delimiter_idxs[:, 0] & non_delimiter_idxs[:, 1])]
         bigram, counts = torch.unique(bigrams, return_counts=True, dim=0)
         if bigram.nelement() == 0:
-            # Todo: log
             print("Could not find any bigrams, aborting...")
             return
         best_idx = torch.argmax(counts)  # get most frequent bigram

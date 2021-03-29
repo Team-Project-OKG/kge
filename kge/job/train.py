@@ -313,8 +313,6 @@ class TrainingJob(TrainingOrEvaluationJob):
             batches=len(self.loader),
             size=self.num_examples,
         )
-        if self.epoch == 50:
-            debug = 0
         if not self.is_forward_only:
             self.current_trace["epoch"].update(
                 lr=[group["lr"] for group in self.optimizer.param_groups],
@@ -345,8 +343,6 @@ class TrainingJob(TrainingOrEvaluationJob):
                 "batch": batch_index,
                 "batches": len(self.loader),
             }
-            if batch_index == 8000 or batch_index == 18000 or batch_index == 28000 or batch_index == 38000:
-                debug = 0
             if not self.is_forward_only:
                 self.current_trace["batch"].update(
                     lr=[group["lr"] for group in self.optimizer.param_groups],
@@ -456,18 +452,7 @@ class TrainingJob(TrainingOrEvaluationJob):
             # update parameters
             batch_optimizer_time = -time.time()
             if not self.is_forward_only:
-                try:
-                    if(self.config.get("transformer_lookup_embedder.custom_lr")):
-                        _dim = self.model._entity_embedder.dim
-                        _warmup = self.config.get("transformer_lookup_embedder.warmup")
-                        _step = batch_index + 1 + (len(self.loader) * (self.epoch-1)) #batches per epoch instead of batch_size
-                        _lr = (_dim ** (-0.5) * min(_step ** (-0.5), _step * _warmup ** (-1.5)))
-                        self.optimizer.defaults['lr'] = _lr
-                        print(",  Step: " +str(_step) +",  lr:" +str(self.optimizer.defaults['lr']))
-                except KeyError:
-                    pass
                 self.optimizer.step()
-
             batch_optimizer_time += time.time()
 
             # update batch trace with the results
@@ -1059,7 +1044,6 @@ class TrainingJobNegativeSampling(TrainingJob):
         result.size = len(batch["triples"])
         result.prepare_time += time.time()
 
-
     def _process_subbatch(
         self,
         batch_index,
@@ -1122,7 +1106,7 @@ class TrainingJobNegativeSampling(TrainingJob):
                 loss_value_torch.backward()
             result.backward_time += time.time()
 
-
+    # adapt subbatch processing to negative sampling within batches
     def _process_subbatch_batch_sampling(
         self,
         batch_index,
@@ -1139,10 +1123,7 @@ class TrainingJobNegativeSampling(TrainingJob):
         subbatch_size = len(triples)
         labels = batch["labels"]  # reuse b/w subbatches
         pre_scores = pre_scores
-
-        #pre_scores = OlpNegativeSample.pre_score_(self.model, triples)  # pre_scores = [_po, spo, sp_]
         loss_value = {}
-
         result.prepare_time += time.time()
 
         # process the subbatch for each slot separately
@@ -1189,7 +1170,6 @@ class TrainingJobNegativeSampling(TrainingJob):
         if not self.is_forward_only:
             loss_value_torch.backward()
         result.backward_time += time.time()
-
 
 
 class TrainingJob1vsAll(TrainingJob):

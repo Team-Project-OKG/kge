@@ -85,7 +85,6 @@ class MentionEmbedder(LookupEmbedder):
     def embed_tokens(self, token_indexes: Tensor) -> Tensor:
         if self.get_option("token_embedding_model.use"):
             if self._precached_embeddings is not None:
-                original_token_indexes = token_indexes.clone()
                 original_shape = token_indexes.shape
                 replacement_index = token_indexes[:,0] < 0
                 precached_indexes = token_indexes[replacement_index][:,0]* -1 - 1
@@ -136,7 +135,7 @@ class MentionEmbedder(LookupEmbedder):
         return self._postprocess(embeddings)
 
     def _token_embed(self, indexes: Tensor):
-        "Combine token embeddings to one embedding for a mention."
+        """ Combine token embeddings to one embedding for a mention."""
         raise NotImplementedError
 
     def _init_pretrained_word_emb(self):
