@@ -18,6 +18,7 @@ unigram_lookup_embedder:
     use: False
     name: distilbert
     precache: 0
+    freeze: False
 
   bin_within_batch: False
   bin_size: 0

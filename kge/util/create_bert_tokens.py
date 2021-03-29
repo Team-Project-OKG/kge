@@ -3,15 +3,22 @@ import pandas as pd
 import torch
 import transformers
 import math
-import os
 import sys
+import pathlib
 
-def create_bert_tokens(input_file, output_file, tokenizer_class=transformers.BertTokenizer, pretrained_weights="prajjwal1/bert-tiny"):
+from os import linesep
+
+
+def create_bert_tokens(input_file, output_file, pretrained_weights="bert_uncased_L-4_H-256_A-4"):
+    """
+    Generates BERT token id map from a input file of the structure:
+    ID\tTextRepresentation
+    """
     df = pd.read_csv(input_file, delimiter="\t", header=None)
 
     batch_size = 5000
 
-    tokenizer = tokenizer_class.from_pretrained(pretrained_weights)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained_weights)
 
     all_tokens = None
 
@@ -26,29 +33,21 @@ def create_bert_tokens(input_file, output_file, tokenizer_class=transformers.Ber
         else:
             all_tokens = all_tokens.append(tokenized)
 
-    #max_len = 0
-    #for i in all_tokens.values:
-    #    if len(i) > max_len:
-    #        max_len = len(i)
-
-    #padded = np.array([i + [0]*(max_len-len(i)) for i in all_tokens.values])
-
-    #attention_mask = np.where(padded != 0, 1, 0)
-
-    #input_ids = torch.tensor(padded, device=0)
-    #attention_mask = torch.tensor(attention_mask, device=0)
-
     with open(output_file, "w") as file:
         for i, value in all_tokens.items():
-            file.write(str(i) + "\t" + " ".join([str(x) for x in value]) + os.linesep)
+            file.write(str(i) + "\t" + " ".join([str(x) for x in value]) + linesep)
 
 
-# give file name as first command line argument
+# give input mapping file name, output file name and the huggingface pretrained weights name as command line arguments
 if __name__ == '__main__':
+    position = pathlib.Path(__file__)
+
     if len(sys.argv) > 2:
-        input_file = sys.argv[1]
-        output_file = sys.argv[2]
+        input_file = pathlib.Path(sys.argv[1])
+        output_file = pathlib.Path(sys.argv[2])
+        pretrained_weights = sys.argv[3]
     else:
-        input_file = "/home/alex/PycharmProjects/kge/data/olpbench/relation_ids.del"
-        output_file = "../pretrained/bert-tiny_relation_id_tokens_ids_map.del"
-    create_bert_tokens(input_file, output_file)
+        input_file = position.resolve().parent.parent / "data" / "olpbench" / "relation_ids.del"
+        output_file = position.resolve().parent.parent / "data" / "olpbench" / "bert_relation_id_tokens_ids_map.del"
+        pretrained_weights = "bert_uncased_L-4_H-256_A-4"
+    create_bert_tokens(input_file, output_file, pretrained_weights)

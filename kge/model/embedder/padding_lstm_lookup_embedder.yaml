@@ -24,6 +24,7 @@ padding_lstm_lookup_embedder:
     use: False
     name: distilbert
     precache: 0
+    freeze: False
 
   pretrained:
     use: False
