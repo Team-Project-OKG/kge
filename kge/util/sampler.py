@@ -677,7 +677,7 @@ class OlpUniformNegativeSample(KgeSampler):
         repeat_indexes = torch.empty(0)  # WOR or WR when all samples unique
 
         positives = positive_triples[:, slot].numpy()
-        drop_index = np.random.choice(num_unique + 1, batch_size, replace=True)+
+        drop_index = np.random.choice(num_unique + 1, batch_size, replace=True)
         unique_samples_index = {s: j for j, s in enumerate(unique_samples)}
         for i, v in [
             (i, unique_samples_index.get(positives[i]))

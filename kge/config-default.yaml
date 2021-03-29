@@ -473,6 +473,7 @@ negative_sampling:
   # implementation: batch
   samples_within_batch: False
 
+
 ## VALIDATION AND EVALUATION ###################################################
 
 # Options used for all evaluation jobs (job.type=="eval"). Also used during
