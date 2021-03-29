@@ -1,5 +1,5 @@
-import: [transformer_lookup_embedder]                                         #!!! adjust if model is changed
-
+import: [transformer_lookup_embedder]
+#yaml for hyperparameter search for the transformer as composition function
 # general settings for the hyperparameter optimization job
 job.type: search
 search.type: ax
@@ -12,21 +12,21 @@ ax_search:
     - name: train.optimizer.default.args.weight_decay
       type: range
       bounds: [0.0000000001, 0.000001]
+    - name: train.optimizer.default.args.lr
+      type: range
+      bounds: [0.00004, 0.00008]
     - name: transformer_lookup_embedder.dim
       type: choice
       values: [256, 512]
     - name: transformer_lookup_embedder.num_layers
       type: choice
-      bounds: [3, 4]
+      values: [3,4]
     - name: transformer_lookup_embedder.pooling
       type: choice
-      bounds: ["mean", "cls"]
-    - name: transformer_lookup_embedder.warmup
-      type: range
-      bounds: [4000, 8000]
+      values: ["mean", "cls"]
     - name: transformer_lookup_embedder.transformer_dropout
       type: range
-      bounds: [0.0, 0.1]
+      bounds: [0.0, 0.3]
 
 
 
@@ -51,9 +51,9 @@ transformer_lookup_embedder:                                                  #!
   bin_size: 1000
   initialize: xavier_uniform_ # is Glorot initialization
   nhead: 8
-  dim_ff: 2048
+  dim_ff: 1024
   custom_lr: True
-  dropout: 0
+  dropout: 0.0
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
@@ -66,12 +66,7 @@ train:
       args:
         +++: +++
         eps: 1e-9
-        lr: 0
       type: Adam
-#  lr_scheduler: ReduceLROnPlateau
-#  lr_scheduler_args:
-#    mode: max
-#    patience: 4'
 
 
 # settings for negative sampling

@@ -52,7 +52,6 @@ train:
   optimizer: Adagrad
 
 # settings for negative sampling
-# num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
 negative_sampling:
   shared: True
   with_replacement: False

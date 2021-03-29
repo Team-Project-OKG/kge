@@ -593,10 +593,6 @@ class DefaultSharedNegativeSample(BatchNegativeSample):
 
 
 class OlpNegativeSample(BatchNegativeSample):
-    """
-    For OLP task: sample unique entities and relations within a batch. Calculate
-    scores collectively for negative samples as well as true triples (= pre_scores).
-    """
 
     def __init__(
         self,
@@ -645,19 +641,21 @@ class OlpNegativeSample(BatchNegativeSample):
 
         # create the complete scoring matrix
         device = self.positive_triples.device
+        #scores = torch.empty(chunk_size, num_unique, device=device)
         scores = torch.empty(chunk_size, pre_scores.shape[1] - 1, device=device)
 
         # fill in the unique negative scores. first column is left empty
         # to hold positive scores
-        scores[:, :] = pre_scores[:, :-1]
+        scores[:, :] = pre_scores[:, :-1]  # Todo: Why do we drop the last column of pre_scores?
         scores[drop_rows, drop_index[drop_rows]] = pre_scores[drop_rows, -1]
         self.forward_time += time.time()
         return scores
 
 
+
 class OlpUniformNegativeSample(KgeSampler):
     """
-    Relevant for OLP task. Implement basic functionality to sample shared entities within a batch.
+    Sample shared entities within the batch
     """
 
     def __init__(self, config: Config, configuration_key: str, dataset: Dataset):
@@ -679,7 +677,7 @@ class OlpUniformNegativeSample(KgeSampler):
         repeat_indexes = torch.empty(0)  # WOR or WR when all samples unique
 
         positives = positive_triples[:, slot].numpy()
-        drop_index = np.random.choice(num_unique + 1, batch_size, replace=True)
+        drop_index = np.random.choice(num_unique + 1, batch_size, replace=True)+
         unique_samples_index = {s: j for j, s in enumerate(unique_samples)}
         for i, v in [
             (i, unique_samples_index.get(positives[i]))

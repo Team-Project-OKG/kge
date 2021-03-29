@@ -16,7 +16,7 @@ complex:
 
 packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
-  bin_within_batch: True  # if True, then bin_size is also activated
+  bin_within_batch: True
   bin_size: 500
   dim: 512
   dropout: 0.07593923183158041

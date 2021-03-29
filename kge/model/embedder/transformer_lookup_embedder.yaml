@@ -1,17 +1,24 @@
-# Stores explicitly an embedding for each object in a lookup table. See
-# https://pytorch.org/docs/stable/nn.html#torch.nn.Embedding
 transformer_lookup_embedder:
   class_name: TransformerLookupEmbedder
 
   # parameters specific to Transformer Lookup Embedder
+
+  #number of attention heads per self-attention layer
   nhead: 8
+
+  #number of encoder layers
   num_layers: 3
+
+  #pooling method (choice of mean, cls, sum and max)
   pooling: mean
-  dim_ff: 2048
-  factor: 1
-  warmup: 4000
-  custom_lr: True
+
+  #dimension of the feed forward layer of each encoder layer
+  dim_ff: 256
+
+  #dropout of the encoder layers as well as the positional embeddings
   transformer_dropout: 0.1
+
+
   # general settings for mention embedders (see mention_embedder.yaml for explanations)
   requires_start_and_end_token: False
 

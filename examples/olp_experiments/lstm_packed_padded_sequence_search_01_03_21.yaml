@@ -40,7 +40,7 @@ complex:
 
 packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
-  bin_within_batch: False  # if True, then bin_size is also activated
+  bin_within_batch: False
   bin_size: 50
 
 # settings for the training job of each hyperparameter combination
@@ -52,7 +52,6 @@ train:
   optimizer: Adagrad
 
 # settings for negative sampling
-# num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
 negative_sampling:
   shared: True
   with_replacement: False

@@ -1,6 +1,6 @@
-import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
+# Hyperparameter search of with Wikipedia2vec default as word embeddings wothout fine tuning
+import: [packed_lstm_lookup_embedder]
 
-# general settings for the hyperparameter optimization job
 job.type: search
 search.type: ax
 valid.metric: mean_reciprocal_rank_filtered
@@ -30,10 +30,10 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: packed_lstm_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: packed_lstm_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: packed_lstm_lookup_embedder
+  relation_embedder.type: packed_lstm_lookup_embedder
 
-packed_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
   pretrained:
     use: True
@@ -51,25 +51,13 @@ train:
   batch_size: 4096
   subbatch_auto_tune: True
   optimizer: Adagrad
-#  lr_scheduler: ReduceLROnPlateau
-#  lr_scheduler_args:
-#    mode: max
-#    patience: 4'
 
 
-# settings for negative sampling
-# use number of replacements equal to the batch size to approximate Samuel's negative sampling algorithm
-# num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
-#!!! look into how to reproduce Samuel's negative sampling algorithm
 negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
   samples_within_batch: True
-  #num_samples:
-  #  s: 8192
-  #  p: 0          # -1 means: same as s
-  #  o: -1
 
 
 # settings for the evaluation job

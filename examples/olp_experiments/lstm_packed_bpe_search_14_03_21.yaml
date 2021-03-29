@@ -34,7 +34,7 @@ complex:
 
 packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
-  bin_within_batch: False  # if True, then bin_size is also activated
+  bin_within_batch: False
   bin_size: 50
   dim: 512
   dropout: 0.07593923183158041
@@ -56,7 +56,6 @@ train:
 
 
 # settings for negative sampling
-# num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
 negative_sampling:
   shared: True
   with_replacement: False
