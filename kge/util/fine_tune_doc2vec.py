@@ -84,7 +84,8 @@ def _sample_sentence(
         output_writer
 ):
     """
-    Create negative samples from a given sentence.
+    Create negative samples from a given sentence either by replacing within the NER tag or from all entitiy
+    and relation mentions.
     """
     for i in range(num_rep):
         sample = sentence
@@ -151,7 +152,8 @@ def _fine_tune(
 ):
     """
     Fine tune doc2vec by creating a new doc2vec model from the vocabulary in the matched sentences and negative samples
-    and initiating its vectors with a pretrained word2vec model.
+    and initiating its vectors with a pretrained word2vec model. Data is streamed due to the larger training corpus
+    compared to fine tuning with word2vec given the created negative samples.
     Saves the fine tuned model as the actual model and as its generated embeddings in word2vec format.
     """
     pretrained_dir = os.path.join(kge_base_dir(), "pretrained")

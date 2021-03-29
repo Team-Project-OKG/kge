@@ -1,6 +1,6 @@
-import: [padding_lstm_lookup_embedder]                                   #!!! adjust if model is changed
+# Best hyperparameters for LSTM with padding (intentionally included)
 
-
+import: [padding_lstm_lookup_embedder]
 
 # settings for the dataset to use
 dataset:
@@ -11,10 +11,10 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: padding_lstm_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: padding_lstm_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: padding_lstm_lookup_embedder
+  relation_embedder.type: padding_lstm_lookup_embedder
 
-padding_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+padding_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
   bin_within_batch: False  # if True, then bin_size is also activated
   bin_size: 0
@@ -36,26 +36,13 @@ train:
         lr: 0.11863342937082051
         weight_decay: 9.769832805251702e-07
 
-#  lr_scheduler: ReduceLROnPlateau
-#  lr_scheduler_args:
-#    mode: max
-#    patience: 4'
-
-
 # settings for negative sampling
-# use number of replacements equal to the batch size to approximate Samuel's negative sampling algorithm
 # num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
-#!!! look into how to reproduce Samuel's negative sampling algorithm
 negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
   samples_within_batch: True
-  #num_samples:
-  #  s: 8192
-  #  p: 0          # -1 means: same as s
-  #  o: -1
-
 
 # settings for the evaluation job
 eval:

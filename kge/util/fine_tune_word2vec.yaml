@@ -1,13 +1,13 @@
 matched_sentences:
-  # directory in folder opiec containing the avro files with matched sentences
+  # directory in folder 'opiec' containing the avro files with matched sentences
   dir: "matched_sentences"
-  # file name of the avro schema for the matched sentences in folder opiec
+  # file name of the avro schema for the matched sentences in folder 'opiec'
   schema_filename: "MatchedSentences.avsc"
 
 word2vec:
   # information about pre-trained word2vec embeddings to use
   pretrained:
-    # file name of pretrained word2vec data in folder pretrained
+    # file name of pretrained word2vec data in folder 'pretrained'
     filename: "enwiki_20180420_500d"
     # file extension of pretrained word2vec data
     filetype: "txt"

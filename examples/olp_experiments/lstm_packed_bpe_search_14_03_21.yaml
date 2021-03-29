@@ -1,15 +1,12 @@
-import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
+# Hyperparameter search for LSTM with PyTorch padding cutting and byte-pair encoding
+
+import: [packed_lstm_lookup_embedder]
 
 # general settings for the hyperparameter optimization job
 job.type: search
 search.type: manual
 valid.metric: mean_reciprocal_rank_filtered
 manual_search.configurations:
-  #- { folder: 'ent_200_rel_50', dataset.iterations_entities: 200, dataset.iterations_relations: 50 }
-  #- { folder: 'ent_300_rel_100', dataset.iterations_entities: 300, dataset.iterations_relations: 100 }
-  #- { folder: 'ent_400_rel_200', dataset.iterations_entities: 400, dataset.iterations_relations: 200 }
-  #- { folder: 'ent_400_rel_600', dataset.iterations_entities: 400, dataset.iterations_relations: 600 }
-  #- { folder: 'ent_500_rel_1000', dataset.iterations_entities: 500, dataset.iterations_relations: 1000 }
   - { folder: 'ent_1000_rel_1150', dataset.iterations_entities: 1000, dataset.iterations_relations: 1150 }
   - { folder: 'ent_2000_rel_1500', dataset.iterations_entities: 2000, dataset.iterations_relations: 1500 }
   - { folder: 'ent_5000_rel_2000', dataset.iterations_entities: 5000, dataset.iterations_relations: 2000 }
@@ -32,10 +29,10 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: packed_lstm_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: packed_lstm_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: packed_lstm_lookup_embedder
+  relation_embedder.type: packed_lstm_lookup_embedder
 
-packed_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
   bin_within_batch: False  # if True, then bin_size is also activated
   bin_size: 50
@@ -56,26 +53,15 @@ train:
         +++: +++
         lr: 0.055758330747485166
         weight_decay: 7.179384912855923e-07
-#  lr_scheduler: ReduceLROnPlateau
-#  lr_scheduler_args:
-#    mode: max
-#    patience: 4'
 
 
 # settings for negative sampling
-# use number of replacements equal to the batch size to approximate Samuel's negative sampling algorithm
 # num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
-#!!! look into how to reproduce Samuel's negative sampling algorithm
 negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
   samples_within_batch: True
-  #num_samples:
-  #  s: 8192
-  #  p: 0          # -1 means: same as s
-  #  o: -1
-
 
 # settings for the evaluation job
 eval:

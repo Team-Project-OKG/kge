@@ -1,25 +1,29 @@
-import: [lstm_lookup_embedder]                                         #!!! adjust if model is changed
-
-
+import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
 
 # settings for the dataset to use
 dataset:
   type: olp
   name: olpbench
+  byte_pair_encoding: False
 
 # settings for ComplEx and the respective embedders
 model: complex
 
 complex:
-  entity_embedder.type: lstm_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: lstm_lookup_embedder                         #!!! adjust if model is changed
+  entity_embedder.type: packed_lstm_lookup_embedder                           #!!! adjust if model is changed
+  relation_embedder.type: packed_lstm_lookup_embedder                         #!!! adjust if model is changed
 
-lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+packed_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
   initialize: xavier_uniform_ # is Glorot initialization
-  bin_within_batch: False  # if True, then bin_size is also activated
-  bin_size: 50
-  dim: 512
-  dropout: 0.07593923183158041
+  dropout: 0.07800686648115517
+  pretrained:
+    use: True
+    file:
+      name: enwiki_20180420_500d  #glove.840B.300d_word2vec
+      type: txt
+    oov_tactic: 'random'
+    freeze: False
+    use_pickle: True
 
 # settings for the training job of each hyperparameter combination
 train:
@@ -30,11 +34,11 @@ train:
   optimizer:
     +++: +++
     default:
-      type: Adagrad
       args:
         +++: +++
-        lr: 0.055758330747485166
-        weight_decay: 7.179384912855923e-07
+        lr: 0.16071061396040023
+        weight_decay: 5.501112763443961e-07
+      type: Adagrad
 #  lr_scheduler: ReduceLROnPlateau
 #  lr_scheduler_args:
 #    mode: max

@@ -1,11 +1,11 @@
 from torch import Tensor
 import torch.nn
-
 from kge import Config, Dataset
 from kge.model import MentionEmbedder
 
 
 class LstmLookupEmbedder(MentionEmbedder):
+    """LSTM Mention embedder with manual padding cutting"""
 
     def __init__(
             self,
@@ -38,15 +38,3 @@ class LstmLookupEmbedder(MentionEmbedder):
         lstm_output, hn = self._encoder_lstm(token_embeddings)
         num_tokens = (~ (token_indexes == 0)).sum(dim=1)
         return lstm_output[torch.arange(0, lstm_output.shape[0]), num_tokens - 1]
-
-    #def _token_embed(self, indexes: Tensor):
-    #    "Combine token embeddings to one embedding for a mention."
-    #    var = self._forward(super().embed(indexes), self._token_lookup[indexes])
-     #   return var
-    #    #raise NotImplementedError
-   # def embed(self, indexes: Tensor) -> Tensor:
-   #     return self._forward(super().embed(indexes), self._token_lookup[indexes])
-
-    # return the pooled token entity/relation embedding vectors
-   # def embed_all(self) -> Tensor:
-   #     return self._forward(super().embed_all(), self._token_lookup)

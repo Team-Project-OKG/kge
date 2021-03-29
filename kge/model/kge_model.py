@@ -6,13 +6,11 @@ from torch import Tensor
 import torch.nn
 import numpy as np
 import os
-import time
 import kge
 from kge import Config, Configurable, Dataset
 from kge.misc import filename_in_module
 from kge.util import load_checkpoint
 from typing import Any, Dict, List, Optional, Union, Tuple
-from operator import itemgetter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -751,6 +749,9 @@ class KgeModel(KgeBase):
         return self._scorer.score_emb(s, p, o, combine="s_o")
 
     def score_olp_neg_sampling(self, s: Tensor, o: Tensor, p: Tensor, unique_targets: Tensor):
+        """ For sampling within batches in OLP task. Embed unique entities and relations within a batch.
+            Hand them over for scoring.
+        """
         neg_samps = self.get_s_embedder().embed(unique_targets)
         s = self.get_s_embedder().embed(s)
         o = self.get_s_embedder().embed(o)

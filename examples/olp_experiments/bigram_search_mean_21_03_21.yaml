@@ -1,6 +1,6 @@
-# Hyperparameter search for LSTM with PyTorch padding cutting and BERT pre-trained embeddings
+# Hyperparameter search for bigram model with mean pooling
 
-import: [packed_lstm_lookup_embedder]
+import: [bigram_lookup_embedder]
 
 # general settings for the hyperparameter optimization job
 job.type: search
@@ -8,8 +8,8 @@ search.type: ax
 valid.metric: mean_reciprocal_rank_filtered
 
 ax_search:
-  num_trials: 10
-  num_sobol_trials: 10
+  num_trials: 15
+  num_sobol_trials: 15
   parameters:
     - name: train.optimizer.default.args.lr
       type: range
@@ -17,7 +17,11 @@ ax_search:
     - name: train.optimizer.default.args.weight_decay
       type: range
       bounds: [0.0000000001, 0.000001]
-    - name: packed_lstm_lookup_embedder.dropout
+    - name: bigram_lookup_embedder.dim
+      type: choice
+      values: [256, 512]
+      is_ordered: True
+    - name: bigram_lookup_embedder.dropout
       type: range
       bounds: [0.0, 0.1]
 
@@ -25,24 +29,20 @@ ax_search:
 # settings for the dataset to use
 dataset:
   type: olp
-  name: olpbench_bert
+  name: olpbench
 
 # settings for ComplEx and the respective embedders
 model: complex
 
 complex:
-  entity_embedder.type: packed_lstm_lookup_embedder
-  relation_embedder.type: packed_lstm_lookup_embedder
+  entity_embedder.type: bigram_lookup_embedder
+  relation_embedder.type: bigram_lookup_embedder
 
-packed_lstm_lookup_embedder:
+bigram_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
   bin_within_batch: False  # if True, then bin_size is also activated
-  token_embedding_model:
-    use: True
-    name: prajjwal1/bert-mini
-    precache: 15000
-  dim: 256
-  num_layers: 1
+  bin_size: 50
+  pooling: 'mean'
 
 # settings for the training job of each hyperparameter combination
 train:
@@ -52,8 +52,8 @@ train:
   subbatch_auto_tune: True
   optimizer: Adagrad
 
+
 # settings for negative sampling
-# num_samples describes the length of individual samples, not the number of samples. e.g. num_sample: 4 -> [rand, rand, rand, rand]; num_sample:3 -> [rand, rand, rand]
 negative_sampling:
   shared: True
   with_replacement: False
@@ -63,4 +63,4 @@ negative_sampling:
 # settings for the evaluation job
 eval:
   type: olp_entity_ranking
-  batch_size: 5000
+  batch_size: 500

@@ -5,6 +5,7 @@ from kge.model import MentionEmbedder
 
 
 class UnigramLookupEmbedder(MentionEmbedder):
+    """ Unigram mention embedder with pooling functions 'sum', 'max' and 'mean'. """
 
     def __init__(
             self,
@@ -21,7 +22,7 @@ class UnigramLookupEmbedder(MentionEmbedder):
     def _token_embed(self, token_indexes):
         token_embeddings = self.embed_tokens(token_indexes.long())
         # pooling on token embeddings
-        if self.pooling == 'max':  # should reduce dimensions to (batch_size, dim)
+        if self.pooling == 'max':  # reduces dimensions to (batch_size, dim)
             pooled_embeddings = token_embeddings.max(dim=1).values
         elif self.pooling == 'mean':
             lengths = (~(token_indexes == 0)).sum(dim=1)

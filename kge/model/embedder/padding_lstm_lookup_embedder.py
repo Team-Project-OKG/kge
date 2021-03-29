@@ -6,6 +6,7 @@ from kge.model import MentionEmbedder
 
 
 class PaddingLstmLookupEmbedder(MentionEmbedder):
+    """ LSTM mention embedder that uses padding intentionally."""
 
     def __init__(
             self,
@@ -36,5 +37,4 @@ class PaddingLstmLookupEmbedder(MentionEmbedder):
     def _token_embed(self, token_indexes):
         token_embeddings = self.embed_tokens(token_indexes.long())
         lstm_output, hn = self._encoder_lstm(token_embeddings)
-        num_tokens = (~(token_indexes == 0)).sum(dim=1)
         return lstm_output[:, -1, :]

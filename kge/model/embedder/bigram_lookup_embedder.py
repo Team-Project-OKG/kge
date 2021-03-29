@@ -4,6 +4,7 @@ from kge.model import MentionEmbedder
 import torch
 
 class BigramLookupEmbedder(MentionEmbedder):
+    """Bigram mention embedder with max, mean, sum pooling."""
 
     def __init__(
             self,
@@ -23,7 +24,6 @@ class BigramLookupEmbedder(MentionEmbedder):
             self.encoder = torch.nn.Conv1d(in_channels=self.dim, out_channels=self.dim, kernel_size=2, dilation=1, bias=False)
 
     def _token_embed(self, token_indexes: Tensor):
-        # token_indexes = self.lookup_tokens(indexes)
         token_mask = (~(token_indexes == 0)).unsqueeze(1).float()[:, :, 1:]
         token_embeddings = self.embed_tokens(token_indexes).transpose(1, 2)
         encoded = self.encoder(token_embeddings)
@@ -40,16 +40,3 @@ class BigramLookupEmbedder(MentionEmbedder):
         else:
             raise NotImplementedError
         return pooled
-
-    '''
-    # Keep as a backup for KvsAll
-    # return the pooled token entity/relation embedding vectors
-    def embed_all(self) -> Tensor:
-        token_indexes = self._token_lookup
-        token_mask = (token_indexes > 0).unsqueeze(1).float()[:, :, 1:]
-        token_embeddings = self.embed_tokens(token_indexes).transpose(1, 2)
-        encoded = self.encoder(token_embeddings)
-        encoded = encoded + token_embeddings[:, :, 1:]
-        pooled = self._pooling(encoded * token_mask)
-        return pooled
-    '''

@@ -1,19 +1,19 @@
 matched_triples:
-  # directory in folder opiec containing the avro files with matched triples
+  # directory in folder 'opiec' containing the avro files with matched triples
   dir: "matched_triples"
-  # file name of the avro schema for the matched triples in folder opiec
+  # file name of the avro schema for the matched triples in folder 'opiec'
   schema_filename: "MatchedTriples.avsc"
 
 matched_sentences:
-  # directory in folder opiec containing the avro files with matched sentences
+  # directory in folder 'opiec' containing the avro files with matched sentences
   dir: "matched_sentences"
-  # file name of the avro schema for the matched sentences in folder opiec
+  # file name of the avro schema for the matched sentences in folder 'opiec'
   schema_filename: "MatchedSentences.avsc"
 
 negative_sampling:
   # information about the file to which negatively sampled and positive sentences are written
   file:
-    # file name of txt file to write to in folder opiec
+    # file name of txt file to write to in folder 'opiec'
     filename: "negative_sampled_sentences.txt"
     # flag whether to not create negative samples from scratch, but load them from the given file instead
     load_from_file: False
@@ -33,8 +33,7 @@ doc2vec:
   fine_tune: True
   # information about pre-trained word2vec embeddings to use
   pretrained:
-    # file name of pretrained word2vec data in folder pretrained
-    # filename: "glove.840B.300d_word2vec"
+    # file name of pretrained word2vec data in folder 'pretrained'
     filename: "enwiki_20180420_500d"
     # file extension of pretrained word2vec data
     filetype: "txt"

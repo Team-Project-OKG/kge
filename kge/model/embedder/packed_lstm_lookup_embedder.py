@@ -7,6 +7,7 @@ from kge.model import MentionEmbedder
 
 
 class PackedLstmLookupEmbedder(MentionEmbedder):
+    """ LSTM mention embedder with PyTorch functionality to cut paddings."""
 
     def __init__(
             self,
@@ -16,8 +17,7 @@ class PackedLstmLookupEmbedder(MentionEmbedder):
             vocab_size: int,
             init_for_load_only=False,
     ):
-        super().__init__(
-            config, dataset, configuration_key, vocab_size, init_for_load_only=init_for_load_only)
+        super().__init__(config, dataset, configuration_key, vocab_size, init_for_load_only=init_for_load_only)
 
         if self.get_option("emb_dim_as_hidden_dim"):
             self.hidden_dim = self.dim

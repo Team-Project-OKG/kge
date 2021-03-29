@@ -1,6 +1,6 @@
-# Best hyperparameters for LSTM with PyTorch padding cutting
+# Best hyperparameters for LSTM with padding manual padding cutting
 
-import: [packed_lstm_lookup_embedder]
+import: [lstm_lookup_embedder]
 
 # settings for the dataset to use
 dataset:
@@ -11,10 +11,10 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: packed_lstm_lookup_embedder
-  relation_embedder.type: packed_lstm_lookup_embedder
+  entity_embedder.type: lstm_lookup_embedder
+  relation_embedder.type: lstm_lookup_embedder
 
-packed_lstm_lookup_embedder:
+lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
   bin_within_batch: False  # if True, then bin_size is also activated
   bin_size: 50

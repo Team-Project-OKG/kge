@@ -53,6 +53,9 @@ dataset:
   # specified below.
   name: 'toy'
 
+  # Type of the used dataset, either 'lp' or 'olp'.
+  type: 'lp'
+
   # Number of entities. If set to -1, automatically determined from the
   # entity_ids file (see below).
   num_entities: -1
@@ -60,6 +63,22 @@ dataset:
   # Number of relations. If set to -1, automatically determined from the
   # relation_ids file (see below).
   num_relations: -1
+
+  # Number of token for entity mentions in the OLP task. If set to -1,
+  # automatically determined from the entity_token_ids file (see below).
+  num_tokens_entities: -1
+
+  # Number of token for relation mentions in the OLP task. If set to -1,
+  # automatically determined from the relation_token_ids file (see below).
+  num_tokens_relations: -1
+
+  # Maximum token length of entity mentions in the OLP task. If set to -1,
+  # automatically determined from the entity_id_token_ids file (see below).
+  max_tokens_per_entity: -1
+
+  # Maximum token length of entity mentions in the OLP task. If set to -1,
+  # automatically determined from the relation_id_token_ids file (see below).
+  max_tokens_per_relation: -1
 
   # A list of files associated with this dataset, each associated with a key.
   # Each entry must contain at least the filename and the type fields.
@@ -72,6 +91,16 @@ dataset:
     # - 1: # relation index
     # - 2: object index
     # - 3-...: arbitrary metadata fields
+    #
+    # OLP dataset can be of type "quintuples" an contain tab-separated fields.
+    # - 0: subject index
+    # - 1: relation index
+    # - 2: object index
+    # - 3: space separated list of alternative subject indexes
+    # - 4: space separated list of alternative object indexes
+    # If only the original subject and object index are listed as alternative
+    # mentions (e.g. for training data), use type 'triples' to substantially
+    # speed up loading of data.
     #
     # Indexes are assumed to be dense throughout.
     train:
@@ -98,6 +127,21 @@ dataset:
       filename: relation_ids.del
       type: map
 
+    # Tokens of entity and relation mentions ids files, which store the externally
+    # used ids for each token of the OLP task. These files are optional for many
+    # models if 'dataset.num_tokens_entities' and 'dataset.num_tokens_relations' is
+    # specified.
+    #
+    # The map format uses two fields that are tab-separated:
+    # - 0: internal entity/relation index (as in train/valid/test)
+    # - 1: external id (interpreted as string)
+    entity_token_ids:
+      filename: entity_token_id_map.del
+      type: map
+    relation_token_ids:
+      filename: relation_token_id_map.del
+      type: map
+
     # Files that store human-readble string representations of each
     # entity/relation. These files are optional.
     #
@@ -110,6 +154,18 @@ dataset:
       filename: relation_ids.del  # default to id file
       type: map
 
+    # Files that store the mapping of mentions to token ID sequences. Contains
+    # the mention ID separated by tab from the sequence of token IDs. Token ID
+    # sequence is separated by space. Relevant for OLP task only.
+    #
+    # Must always be of type sequence_map using an internal entity/relation index.
+    entity_id_token_ids:
+      filename: entity_id_tokens_ids_map.del
+      type: sequence_map
+    relation_id_token_ids:
+      filename: relation_id_tokens_ids_map.del
+      type: sequence_map
+
     # Additional files can be added as needed
     +++: +++
 
@@ -120,9 +176,29 @@ dataset:
   # (in dataset.yaml).
   pickle: True
 
+  # List of indexes that represent padding of token sequences. Respective embeddings
+  # are set to 0 if set_padding_embeddings_to_0 is True in the specific mention
+  # embedder subclass configuration. Relevant for OLP task only.
+  padding_indexes: [0]
+
+  # Whether token sequences always include a start and end token. Can be filtered
+  # by setting requires_start_and_end_token in the specific mention embedder subclass
+  # configuration. Start and end token cannot be added during runtime if not present
+  # in the dataset. Relevant for OLP task only.
+  has_start_and_end_token: True
 
   # TODO: ADD COMMENT FOR BYTE PAIR ENCODING
+  # Whether to use byte-pair encoding - only available for OLPDatasets. Split up
+  # the tokens into sub-tokens and embed those.
+  # Create separate sub-token vocabularies for token sequences of entities and
+  # relations
+  # 0 iterations_entities/relations: character-level sub-tokens. High memory during
+  # training, very low preparation runtime.
+  # Max iterations: If no more bigrams can be found -> token-level sub-tokens
+  # lower memory during training, high preparation runtime
   byte_pair_encoding: False
+  iterations_entities: 100
+  iterations_relations: 100
 
   # Additional dataset specific keys can be added as needed
   +++: +++
@@ -320,7 +396,6 @@ negative_sampling:
   #                  sequence length of the bin, speeding up the training. This automatically
   #                  causes negative samples to automatically be drawn from all entities / relations
   #                  with at max the length of the true entity / relation.
-  #                  !!! Initialize numpy random seed to ensure repoducibililty of results
   #   - min_support: If sequence_bins is selected, enforces a minimum number of triples
   #                  within each bin.
   triple_sampling:
@@ -386,6 +461,12 @@ negative_sampling:
   # 'triple' (e.g., for TransE or RotatE in the current implementation).
   implementation: triple
 
+  # TODO: explanation
+  # Can only be used with
+  # sampling_type: uniform
+  # shared: True
+  # with_replacement: False
+  # implementation: batch
   samples_within_batch: False
 
 ## VALIDATION AND EVALUATION ###################################################
