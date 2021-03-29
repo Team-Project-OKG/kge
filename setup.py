@@ -9,13 +9,13 @@ setup(
     author_email="rgemulla@uni-mannheim.de",
     packages=["kge"],
     install_requires=[
-        "torch>=1.3.1",
+        "torch==1.7.1",
         "pyyaml",
         "pandas",
         "argparse",
         "path",
         # please check correct behaviour when updating ax platform version!!
-        "ax-platform==0.1.10",
+        "ax-platform==0.1.19",
         "sqlalchemy",
         "torchviz",
         # LibKGE uses numba typed-dicts which is part of the experimental numba API
@@ -25,7 +25,9 @@ setup(
         "avro",  # reading opiec
         "transformers",  # bert pretrained embeddings
     ],
-    python_requires='>=3.7',  # ax 0.1.10 requires python 3.7
+    # Ax 0.1.10 requires python 3.7. Numba does not yet support for Python 3.9:
+    # https://github.com/numba/numba/issues/6345
+    python_requires=">=3.7,<3.9",
     zip_safe=False,
     entry_points={"console_scripts": ["kge = kge.cli:main",],},
 )
