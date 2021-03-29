@@ -464,9 +464,9 @@ class TrainingJob(TrainingOrEvaluationJob):
                         _lr = (_dim ** (-0.5) * min(_step ** (-0.5), _step * _warmup ** (-1.5)))
                         self.optimizer.defaults['lr'] = _lr
                         print(",  Step: " +str(_step) +",  lr:" +str(self.optimizer.defaults['lr']))
-                    self.optimizer.step()
                 except KeyError:
                     pass
+                self.optimizer.step()
 
             batch_optimizer_time += time.time()
 
