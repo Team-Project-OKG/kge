@@ -199,7 +199,6 @@ class MentionEmbedder(LookupEmbedder):
                     oov_counter += 1
                     if oov_random:
                         continue
-                    # TODO: integrate byte-pair encoding
         self._embeddings.weight.requires_grad = not self.get_option("pretrained.freeze")
         self.config.log(f"Initialized embeddings based on {filename}. OOV Errors: {oov_counter} (Rate: "
                         f"{(oov_counter / len(token_list) * 100):.2f}%)")

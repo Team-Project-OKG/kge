@@ -932,7 +932,7 @@ class TrainingJobNegativeSampling(TrainingJob):
         super()._prepare()
 
         self.num_examples = self.dataset.split(self.train_split).size(0)
-
+        # create standard dataloader if default sampling is used
         if self.config.get("negative_sampling.triple_sampling.type") == "default":
             self.loader = torch.utils.data.DataLoader(
                 range(self.num_examples),
@@ -944,6 +944,8 @@ class TrainingJobNegativeSampling(TrainingJob):
                 pin_memory=self.config.get("train.pin_memory"),
             )
         elif self.config.get("negative_sampling.triple_sampling.type") == "sequence_bins":
+            # if sequence length binning is used, create dataloader that samples a bin to take the next batch from
+            # the batch is sampled in the collate function
             self.batch_to_bin = []
             self.curr_index_in_bin = [0] * len(self.dataset._bin_sizes)
             self.lock = Lock()
