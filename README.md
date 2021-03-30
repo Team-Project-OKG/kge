@@ -423,6 +423,22 @@ The embdedder implementation should be stored under
 `<kge-home>/kge/model/embedder/<embedder-name>.py`, its configuration options under
 `<kge-home>/kge/model/embedder/<embedder-name>.yaml` and its import has to be added to `<kge-home>/kge/model/__init__.py`.
 
+## Reproducing OLP results
+
+To reproduce the results of the OLP Team Project, first retreive the OLPBench Data from http://data.dws.informatik.uni-mannheim.de/olpbench/olpbench.tar.gz and unzip it into the `data/olpbench` folder.
+Then, execute `convert_to_del.py` within the folder or adjust the paths accordingly.
+The python script will provide new `.del` files with the id mappings and column structures necessary for LibKGE.
+
+The `olp_experiments` folder contains all the search config files used in the study for `composition_functions` and `token_embeddings` as well as the configs for models with reused hyperparameters.
+
+After installing LibKGE as described above, execute for example: 
+```shell
+kge start olpexperiments/composition_functions/lstm_packed_padded_sequence_search_01_03_21
+```
+
+To create the bert token mappings necessary for the BERT experiments, run ``kge/util/create_bert_tokens.py``.
+
+
 ## Known issues
 
 ## Changelog
