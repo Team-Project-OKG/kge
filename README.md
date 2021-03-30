@@ -448,6 +448,8 @@ To fine tune pre-trained word2vec embeddings with doc2vec based on extracted sen
 
 To transform GloVe embeddings into word2vec format, run ``kge/util/glove_to_word2vec.py`` with the name of the GloVe file as the first command line argument. The GloVe file must be in folder ``kge/pretrained``.
 
+In order to obtain the top 5 guesses of a model for each evaluation query, run any evaluation in branch ``best_eval_triples``. Results are saved to ``kge/data/model_predictions.txt``.
+
 ## Known issues
 
 ## Changelog
