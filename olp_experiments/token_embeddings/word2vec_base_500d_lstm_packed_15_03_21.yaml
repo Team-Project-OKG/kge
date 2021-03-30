@@ -1,5 +1,5 @@
-# Best model of the hyperparameter search of with Wikipedia2vec default as word embeddings wothout fine tuning
-import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
+# Best model of the hyperparameter search of with Wikipedia2vec default as word embeddings without fine tuning
+import: [packed_lstm_lookup_embedder]
 
 # settings for the dataset to use
 dataset:

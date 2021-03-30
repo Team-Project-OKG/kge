@@ -1,4 +1,5 @@
-import: [packed_lstm_lookup_embedder]                                         #!!! adjust if model is changed
+# Best model of the hyperparameter search of with Wikipedia2vec default as word embeddings without fine tuning
+import: [packed_lstm_lookup_embedder]
 
 # settings for the dataset to use
 dataset:
@@ -10,16 +11,15 @@ dataset:
 model: complex
 
 complex:
-  entity_embedder.type: packed_lstm_lookup_embedder                           #!!! adjust if model is changed
-  relation_embedder.type: packed_lstm_lookup_embedder                         #!!! adjust if model is changed
-
-packed_lstm_lookup_embedder:                                                  #!!! adjust if model is changed (incl. parameters of the model)
+  entity_embedder.type: packed_lstm_lookup_embedder
+  relation_embedder.type: packed_lstm_lookup_embedder
+packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
   dropout: 0.07800686648115517
   pretrained:
     use: True
     file:
-      name: enwiki_20180420_500d  #glove.840B.300d_word2vec
+      name: enwiki_20180420_300d  #glove.840B.300d_word2vec
       type: txt
     oov_tactic: 'random'
     freeze: False

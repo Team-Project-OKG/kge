@@ -1,5 +1,24 @@
-# Training of model with fine tuned Wikipedia2Vec 500 embeddingsx
+# Hyperparameter search of with Wikipedia2vec default as word embeddings wothout fine tuning
 import: [packed_lstm_lookup_embedder]
+
+job.type: search
+search.type: ax
+valid.metric: mean_reciprocal_rank_filtered
+
+ax_search:
+  num_trials: 15
+  num_sobol_trials: 15
+  parameters:
+    - name: train.optimizer.default.args.lr
+      type: range
+      bounds: [0.01, 0.2]
+    - name: train.optimizer.default.args.weight_decay
+      type: range
+      bounds: [0.0000000001, 0.000001]
+    - name: packed_lstm_lookup_embedder.dropout
+      type: range
+      bounds: [0.0, 0.1]
+
 
 # settings for the dataset to use
 dataset:
@@ -15,12 +34,11 @@ complex:
   relation_embedder.type: packed_lstm_lookup_embedder
 
 packed_lstm_lookup_embedder:
-  initialize: xavier_uniform_ # is Glorot initialization
-  dropout: 0.07800686648115517
+  initialize: xavier_uniform_
   pretrained:
     use: True
     file:
-      name: enwiki_20180420_500d_doc2vec_fine_tuned  #glove.840B.300d_word2vec
+      name: enwiki_20180420_500d
       type: txt
     oov_tactic: 'random'
     freeze: False
@@ -29,17 +47,11 @@ packed_lstm_lookup_embedder:
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
-  max_epochs: 100
+  max_epochs: 10
   batch_size: 4096
   subbatch_auto_tune: True
-  optimizer:
-    +++: +++
-    default:
-      args:
-        +++: +++
-        lr: 0.16071061396040023
-        weight_decay: 5.501112763443961e-07
-      type: Adagrad
+  optimizer: Adagrad
+
 
 negative_sampling:
   shared: True
