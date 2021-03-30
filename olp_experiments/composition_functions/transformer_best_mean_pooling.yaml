@@ -1,0 +1,60 @@
+# Best hyperparameters for Transformer with mean pooling
+
+import: [transformer_lookup_embedder]
+
+# settings for the dataset to use
+dataset:
+  type: olp
+  name: olpbench
+
+# settings for ComplEx and the respective embedders
+model: complex
+
+complex:
+  entity_embedder.type: transformer_lookup_embedder
+  relation_embedder.type: transformer_lookup_embedder
+
+transformer_lookup_embedder:
+  bin_size: 1000
+  bin_within_batch: true
+  cut_padding_in_batch: true
+  dim: 512
+  dim_ff: 1024
+  dropout: 0.0
+  transformer_dropout: 0.017079669423401354
+  initialize: xavier_uniform_
+  initialize_args:
+    +++: +++
+  nhead: 8
+  normalize:
+    p: -1.0
+  num_layers: 4
+  pooling: mean
+
+# settings for the training job of each hyperparameter combination
+train:
+  type: negative_sampling
+  max_epochs: 100
+  batch_size: 2048
+  subbatch_auto_tune: True
+  optimizer:
+    +++: +++
+    default:
+      type: Adagrad
+      args:
+        +++: +++
+        eps: 1.0e-09
+        lr: 7.90792391449213e-05
+        weight_decay: 5.717977159362286e-07
+
+# settings for negative sampling
+negative_sampling:
+  shared: True
+  with_replacement: False
+  implementation: batch
+  samples_within_batch: True
+
+# settings for the evaluation job
+eval:
+  type: olp_entity_ranking
+  batch_size: 500
