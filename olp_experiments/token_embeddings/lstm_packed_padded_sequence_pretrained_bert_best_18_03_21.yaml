@@ -1,11 +1,9 @@
-# Training of model with fine tuned Wikipedia2Vec 500 embeddingsx
 import: [packed_lstm_lookup_embedder]
 
 # settings for the dataset to use
 dataset:
   type: olp
-  name: olpbench
-  byte_pair_encoding: False
+  name: olpbench_bert
 
 # settings for ComplEx and the respective embedders
 model: complex
@@ -16,20 +14,20 @@ complex:
 
 packed_lstm_lookup_embedder:
   initialize: xavier_uniform_ # is Glorot initialization
-  dropout: 0.07800686648115517
-  pretrained:
+  bin_within_batch: False  # if True, then bin_size is also activated
+  token_embedding_model:
     use: True
-    file:
-      name: enwiki_20180420_500d_doc2vec_fine_tuned  #glove.840B.300d_word2vec
-      type: txt
-    oov_tactic: 'random'
-    freeze: False
-    use_pickle: True
+    name: prajjwal1/bert-mini
+    precache: 15000
+    freeze: True
+  dim: 256
+  num_layers: 1
+  dropout: 0.05407381691038609
 
 # settings for the training job of each hyperparameter combination
 train:
   type: negative_sampling
-  max_epochs: 100
+  max_epochs: 10
   batch_size: 4096
   subbatch_auto_tune: True
   optimizer:
@@ -37,18 +35,18 @@ train:
     default:
       args:
         +++: +++
-        lr: 0.16071061396040023
-        weight_decay: 5.501112763443961e-07
-      type: Adagrad
+        lr: 0.0649261062592268
+        weight_decay: 2.9743421090766786e-09
+    type: Adagrad
 
+# settings for negative sampling
 negative_sampling:
   shared: True
   with_replacement: False
   implementation: batch
   samples_within_batch: True
 
-
 # settings for the evaluation job
 eval:
   type: olp_entity_ranking
-  batch_size: 500
+  batch_size: 5000
