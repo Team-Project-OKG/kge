@@ -1,29 +1,5 @@
 import: [unigram_lookup_embedder]
 
-# general settings for the hyperparameter optimization job
-job.type: search
-search.type: ax
-valid.metric: mean_reciprocal_rank_filtered
-
-ax_search:
-  num_trials: 15
-  num_sobol_trials: 15
-  parameters:
-    - name: train.optimizer.default.args.lr
-      type: range
-      bounds: [0.01, 0.2]
-    - name: train.optimizer.default.args.weight_decay
-      type: range
-      bounds: [0.0000000001, 0.000001]
-    - name: unigram_lookup_embedder.dim
-      type: choice
-      values: [256, 512]
-      is_ordered: True
-    - name: unigram_lookup_embedder.dropout
-      type: range
-      bounds: [0.0, 0.1]
-
-
 # settings for the dataset to use
 dataset:
   type: olp
