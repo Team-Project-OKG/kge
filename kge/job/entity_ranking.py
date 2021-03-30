@@ -213,9 +213,6 @@ class EntityRankingJob(EvaluationJob):
                     else:
                         chunk_size = self.dataset.num_entities()
 
-                    #!!!!!!!!!
-                    chunk_size = 190
-
                     # process chunk by chunk
                     for chunk_number in range(math.ceil(num_entities / chunk_size)):
                         chunk_start = chunk_size * chunk_number
@@ -326,10 +323,16 @@ class EntityRankingJob(EvaluationJob):
             entity_strings = self.dataset._meta['entity_ids']
             relation_strings = self.dataset._meta['relation_ids']
 
-            with open(os.path.join(kge_base_dir(), "data", "model_predictions.txt"), "w") as f:
+            with open(os.path.join(kge_base_dir(), "data", "model_predictions.txt"), "a") as f:
                 for i in range(len(batch_coords[0])):
                     true_triple = f"{entity_strings[batch_coords[0][i][0]]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[int(o_true_entities[i].item())]}"
                     f.write(f"True triple (object):\n{true_triple}\n")
+                    f.write(f"Rank: {ranks_and_ties_for_ranking['o_filt'][0][i].item()}\nAlternative objects: ")
+                    sub, pre, obj = tuple(batch_coords[0][i])
+                    for j in range(len(batch_coords[4])):
+                        if batch_coords[4][j][0].item() == sub and batch_coords[4][j][1].item() == pre and batch_coords[4][j][2].item() == obj:
+                            f.write(f"{entity_strings[batch_coords[4][j][3]]} || ")
+                    f.write("\n")
                     f.write("Best ranked triples (object):\n")
                     for index in best_objects[i]:
                         triple = f"{entity_strings[batch_coords[0][i][0]]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[index]}"
@@ -337,6 +340,11 @@ class EntityRankingJob(EvaluationJob):
                     f.write("\n")
                     true_triple = f"{entity_strings[int(s_true_entities[i].item())]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[batch_coords[0][i][2]]}"
                     f.write(f"True triple (subject):\n{true_triple}\n")
+                    f.write(f"Rank: {ranks_and_ties_for_ranking['s_filt'][0][i].item()}\nAlternative subjects: ")
+                    for j in range(len(batch_coords[3])):
+                        if batch_coords[3][j][0].item() == sub and batch_coords[3][j][1].item() == pre and batch_coords[3][j][2].item() == obj:
+                            f.write(f"{entity_strings[batch_coords[3][j][3]]} || ")
+                    f.write("\n")
                     f.write("Best ranked triples (subject):\n")
                     for index in best_subjects[i]:
                         triple = f"{entity_strings[index]} || {relation_strings[batch_coords[0][i][1]]} || {entity_strings[batch_coords[0][i][2]]}"

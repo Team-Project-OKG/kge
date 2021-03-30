@@ -1,10 +1,10 @@
-import: [lookup_embedder]
+import: [lstm_lookup_embedder]
 
 complex:
   class_name: ComplEx
   entity_embedder:
-    type: lookup_embedder
+    type: lstm_lookup_embedder
     +++: +++
   relation_embedder:
-    type: lookup_embedder
+    type: lstm_lookup_embedder
     +++: +++
