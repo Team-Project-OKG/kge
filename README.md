@@ -450,6 +450,8 @@ To transform GloVe embeddings into word2vec format, run ``kge/util/glove_to_word
 
 In order to obtain the top 5 guesses of a model for each evaluation query, run any evaluation in branch ``best_eval_triples``. Results are saved to ``kge/data/model_predictions.txt``.
 
+To recreate OLPBench-Small, see ReadMe and scripts in ``kge/data/olpbench_small/olpbench-small_dataset_creation``.
+
 ## Known issues
 
 ## Changelog
