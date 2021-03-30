@@ -1,0 +1,52 @@
+import: [packed_lstm_lookup_embedder]
+
+# settings for the dataset to use
+dataset:
+  type: olp
+  name: olpbench_bert
+
+# settings for ComplEx and the respective embedders
+model: complex
+
+complex:
+  entity_embedder.type: packed_lstm_lookup_embedder
+  relation_embedder.type: packed_lstm_lookup_embedder
+
+packed_lstm_lookup_embedder:
+  initialize: xavier_uniform_ # is Glorot initialization
+  bin_within_batch: False  # if True, then bin_size is also activated
+  token_embedding_model:
+    use: True
+    name: prajjwal1/bert-mini
+    precache: 15000
+    freeze: True
+  dim: 256
+  num_layers: 1
+  dropout: 0.05407381691038609
+
+# settings for the training job of each hyperparameter combination
+train:
+  type: negative_sampling
+  max_epochs: 10
+  batch_size: 4096
+  subbatch_auto_tune: True
+  optimizer:
+    +++: +++
+    default:
+      args:
+        +++: +++
+        lr: 0.0649261062592268
+        weight_decay: 2.9743421090766786e-09
+    type: Adagrad
+
+# settings for negative sampling
+negative_sampling:
+  shared: True
+  with_replacement: False
+  implementation: batch
+  samples_within_batch: True
+
+# settings for the evaluation job
+eval:
+  type: olp_entity_ranking
+  batch_size: 5000
