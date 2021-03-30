@@ -34,7 +34,8 @@ alternative to KGE.
 7. [Known issues](#known-issues)
 8. [Changelog](CHANGELOG.md)
 9. [Other KGE frameworks](#other-kge-frameworks)
-10. [How to cite](#how-to-cite)
+10. [Reproducing OLP results](#reproducing-olp-results)
+11. [How to cite](#how-to-cite)
 
 ## Features
 
@@ -429,15 +430,23 @@ To reproduce the results of the OLP Team Project, first retreive the OLPBench Da
 Then, execute `convert_to_del.py` within the folder or adjust the paths accordingly.
 The python script will provide new `.del` files with the id mappings and column structures necessary for LibKGE.
 
-The `olp_experiments` folder contains all the search config files used in the study for `composition_functions` and `token_embeddings` as well as the configs for models with reused hyperparameters.
+The `olp_experiments` folder contains all the search config files and the respective training files of the best model used in the study for `composition_functions` and `token_embeddings`, as well as the configs for models with reused hyperparameters.
 
 After installing LibKGE as described above, execute for example: 
-```shell
-kge start olpexperiments/composition_functions/lstm_packed_padded_sequence_search_01_03_21
-```
+````shell
+kge start olp_experiments/composition_functions/lstm_packed_padded_sequence_search_01_03_21
+````
 
 To create the bert token mappings necessary for the BERT experiments, run ``kge/util/create_bert_tokens.py``.
 
+To extract sentences from OPIEC by matching triples from OLPBench, run ``kge/util/sentences_from_opiec.py``. Configure with ``kge/util/sentences_from_opiec.yaml``. 
+Note that text representations of OLPBench are required, e.g. ``train_data_thorough.txt``.
+
+To fine tune pre-trained word2vec embeddings with word2vec based on extracted sentences from OPIEC, run ``kge/util/fine_tune_word2vec.py``. Configure with ``kge/util/fine_tune_word2vec.yaml``. 
+
+To fine tune pre-trained word2vec embeddings with doc2vec based on extracted sentences from OPIEC, run ``kge/util/fine_tune_doc2vec.py``. Configure with ``kge/util/fine_tune_doc2vec.yaml``. 
+
+To transform GloVe embeddings into word2vec format, run ``kge/util/glove_to_word2vec.py`` with the name of the GloVe file as the first command line argument. The GloVe file must be in folder ``kge/pretrained``.
 
 ## Known issues
 
