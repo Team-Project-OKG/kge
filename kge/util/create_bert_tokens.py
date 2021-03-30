@@ -47,7 +47,7 @@ if __name__ == '__main__':
         output_file = pathlib.Path(sys.argv[2])
         pretrained_weights = sys.argv[3]
     else:
-        input_file = position.resolve().parent.parent / "data" / "olpbench" / "relation_ids.del"
-        output_file = position.resolve().parent.parent / "data" / "olpbench_bert" / "bert_relation_id_tokens_ids_map.del"
+        input_file = position.resolve().parent.parent.parent / "data" / "olpbench" / "relation_ids.del"
+        output_file = position.resolve().parent.parent.parent / "data" / "olpbench_bert" / "bert_relation_id_tokens_ids_map.del"
         pretrained_weights = "bert_uncased_L-4_H-256_A-4"
     create_bert_tokens(input_file, output_file, pretrained_weights)
