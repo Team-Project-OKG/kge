@@ -504,7 +504,7 @@ eval:
   split: valid
 
   # Type of evaluation job (see respective configuration key). LibKGE ships with
-  # the following jobs: entity_ranking, training_loss
+  # the following jobs: entity_ranking, olp_entity_ranking, training_loss
   type: entity_ranking
 
   # Batch size used during evaluation
