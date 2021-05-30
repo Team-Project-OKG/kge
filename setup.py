@@ -20,6 +20,7 @@ setup(
         "torchviz",
         # LibKGE uses numba typed-dicts which is part of the experimental numba API
         # see http://numba.pydata.org/numba-doc/0.50.1/reference/pysupported.html
+        "numba==0.53.1",
         "numba==0.50.*",
         "gensim",  # word2vec embeddings
         "avro",  # reading opiec
